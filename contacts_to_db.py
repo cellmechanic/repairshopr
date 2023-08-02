@@ -54,7 +54,7 @@ ENTRY_COUNT = 0
 # Iterate through the pages
 while PAGE <= total_pages:
     for contact in data['contacts']:
-        #fix dates for the DB
+        # fix dates for the DB
         created_at_str = contact['created_at']
         formatted_created_at = format_date_fordb(created_at_str)
         updated_at_str = contact['updated_at']
@@ -108,7 +108,7 @@ while PAGE <= total_pages:
 
 # Check if the total entries match the expected count
 if ENTRY_COUNT != total_entries:
-    print(f'Warning: Expected {total_entries} entries but found {ENTRY_COUNT}.')
+    print(
+        f'Warning: Expected {total_entries} entries but found {ENTRY_COUNT}.')
 
 print("Contacts successfully inserted into the database.")
-
