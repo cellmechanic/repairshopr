@@ -7,7 +7,7 @@ import json
 
 # Load environment variables
 load_dotenv()
-api_key = os.getenv('API_KEY')
+api_key = os.getenv('API_CONTACT_KEY')
 api_url = os.getenv('API_CONTACT')
 user = os.getenv('DB_USER')
 password = os.getenv('DB_PASSWORD')
