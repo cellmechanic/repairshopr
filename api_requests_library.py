@@ -52,3 +52,28 @@ def check_last_ran(timestamp_file):
 def get_timestamp_code():
     '''return the correct timestamp code to stay uniform'''
     return '%Y-%m-%dT%H:%M:%S.%f%z'
+
+
+def compare_db_to_rs(cursor, connection):
+    '''take each id and check RS API to make sure it exists'''
+    cursor.execute("SELECT * FROM contacts")
+    contacts = cursor.fetchall()
+
+    # Iterate through the contacts
+    for contact in contacts:
+        # Assuming the ID is the first element in the tuple
+        contact_id = contact[0]
+        url = f"https://cellmechanic.repairshopr.com/api/v1/contacts/{contact_id}"
+
+        response = requests.get(url, timeout=10)
+
+        if response.status_code == 404:
+            # Contact not found; move to deleted_contacts
+            placeholders = ', '.join(['%s'] * len(contact))
+            cursor.execute(
+                f"INSERT INTO deleted_contacts VALUES ({placeholders})", contact)
+            cursor.execute("DELETE FROM contacts WHERE id = %s", (contact_id,))
+            print(f"Moved contact {contact_id} to deleted_contacts table")
+
+    # Commit changes
+    connection.commit()

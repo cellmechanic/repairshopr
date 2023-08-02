@@ -7,6 +7,7 @@ from api_requests_library import get_contacts
 from api_requests_library import update_last_ran
 from api_requests_library import check_last_ran
 from api_requests_library import get_timestamp_code
+# from api_requests_library import compare_db_to_rs
 
 # Load timestamp
 TIMESTAMP_FILE = 'last_run_contacts.txt'
@@ -150,6 +151,12 @@ try:
 
     print("Contacts successfully inserted into the database.")
     print(f"Made: {TOTAL_ENTRIES} updates")
+    print("Comparing DB to RS")
+    # try:
+    #    compare_db_to_rs(cursor,CONNECTION)
+    # except IOError as error:
+    #    print("error")
+
 except mysql.connector.Error as err:
     print(f"Database error {err}")
 finally:
