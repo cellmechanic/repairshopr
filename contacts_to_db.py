@@ -1,27 +1,11 @@
 """Getting RS Contacts"""
 from datetime import datetime
-import os
 import mysql.connector
 import requests
-from dotenv import load_dotenv
-
-
-# Load environment variables from .env, don't publish that
-load_dotenv()
-api_key = os.getenv('API_CONTACT_KEY')
-api_url = os.getenv('API_CONTACT')
-user = os.getenv('DB_USER')
-password = os.getenv('DB_PASSWORD')
-host = os.getenv('DB_HOST')
-database = os.getenv('DB_NAME')
+import env_library
 
 # Database configuration
-config = {
-  'user': user,
-  'password': password,
-  'host': host,
-  'database': database,
-}
+config = env_library.config
 
 # Connect to the database
 connection = mysql.connector.connect(**config)
@@ -58,7 +42,7 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS contacts (
 
 # Fetch data from the API
 
-headers = {'Authorization': f'Bearer {api_key}'}
+headers = {'Authorization': f'Bearer {env_library.api_key_contact}'}
 #response = requests.get(api_url, headers=headers)
 #data = response.json()
 
@@ -67,7 +51,7 @@ headers = {'Authorization': f'Bearer {api_key}'}
 # Function to get contacts from a specific page
 def get_contacts(page):
     """api request"""
-    url = f'{api_url}?page={page}'
+    url = f'{env_library.api_url_contact}?page={page}'
     response = requests.get(url, headers=headers, timeout=10)
     if response.status_code != 200:
         print(f'Error fetching contacts on page {page}: {response.text}')
