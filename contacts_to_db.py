@@ -6,7 +6,7 @@ import requests
 from dotenv import load_dotenv
 
 
-# Load environment variables
+# Load environment variables from .env, don't publish that
 load_dotenv()
 api_key = os.getenv('API_CONTACT_KEY')
 api_url = os.getenv('API_CONTACT')
@@ -14,7 +14,6 @@ user = os.getenv('DB_USER')
 password = os.getenv('DB_PASSWORD')
 host = os.getenv('DB_HOST')
 database = os.getenv('DB_NAME')
-
 
 # Database configuration
 config = {
