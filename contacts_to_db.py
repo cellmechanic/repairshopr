@@ -1,8 +1,8 @@
 """Getting RS Contacts"""
-from datetime import datetime
 import mysql.connector
-import requests
 import env_library
+from fix_dates_library import format_date_fordb
+from api_requests_library import get_contacts
 
 # Database configuration
 config = env_library.config
@@ -41,23 +41,7 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS contacts (
 ''')
 
 # Fetch data from the API
-
 headers = {'Authorization': f'Bearer {env_library.api_key_contact}'}
-#response = requests.get(api_url, headers=headers)
-#data = response.json()
-
-# ...
-
-# Function to get contacts from a specific page
-def get_contacts(page):
-    """api request"""
-    url = f'{env_library.api_url_contact}?page={page}'
-    response = requests.get(url, headers=headers, timeout=10)
-    if response.status_code != 200:
-        print(f'Error fetching contacts on page {page}: {response.text}')
-        return None
-
-    return response.json()
 
 # Start fetching contacts from page 1
 PAGE = 1
@@ -70,14 +54,11 @@ ENTRY_COUNT = 0
 # Iterate through the pages
 while PAGE <= total_pages:
     for contact in data['contacts']:
+        #fix dates for the DB
         created_at_str = contact['created_at']
-        created_at = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
-        formatted_created_at = created_at.strftime('%Y-%m-%d %H:%M:%S')
-
-        # You should also apply a similar conversion to 'updated_at' if needed
+        formatted_created_at = format_date_fordb(created_at_str)
         updated_at_str = contact['updated_at']
-        updated_at = datetime.fromisoformat(updated_at_str.replace('Z', '+00:00'))
-        formatted_updated_at = updated_at.strftime('%Y-%m-%d %H:%M:%S')
+        formatted_updated_at = format_date_fordb(updated_at_str)
 
         cursor.execute('''
         INSERT INTO contacts (id, name, address1, address2, city, state, zip, email, phone, mobile, latitude, longitude, customer_id, 
@@ -120,7 +101,7 @@ while PAGE <= total_pages:
         connection.commit()
         ENTRY_COUNT += 1
 
-    print(f'Page {PAGE} processed.')
+    print(f'Page {PAGE} / {total_pages} processed.')
     PAGE += 1
     if PAGE <= total_pages:
         data = get_contacts(PAGE)
