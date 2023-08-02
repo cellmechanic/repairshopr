@@ -1,9 +1,10 @@
-from dotenv import load_dotenv
+"""Getting RS Contacts"""
 from datetime import datetime
-import mysql.connector
 import os
+import mysql.connector
 import requests
-import json
+from dotenv import load_dotenv
+
 
 # Load environment variables
 load_dotenv()
@@ -66,8 +67,9 @@ headers = {'Authorization': f'Bearer {api_key}'}
 
 # Function to get contacts from a specific page
 def get_contacts(page):
+    """api request"""
     url = f'{api_url}?page={page}'
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=10)
     if response.status_code != 200:
         print(f'Error fetching contacts on page {page}: {response.text}')
         return None
@@ -75,15 +77,15 @@ def get_contacts(page):
     return response.json()
 
 # Start fetching contacts from page 1
-page = 1
-data = get_contacts(page)
+PAGE = 1
+data = get_contacts(PAGE)
 total_pages = data['meta']['total_pages']
 total_entries = data['meta']['total_entries']
-entry_count = 0
+ENTRY_COUNT = 0
 
 # Iterate through the pages
 # Iterate through the pages
-while page <= total_pages:
+while PAGE <= total_pages:
     for contact in data['contacts']:
         created_at_str = contact['created_at']
         created_at = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
@@ -133,15 +135,15 @@ while page <= total_pages:
             contact['processed_mobile'], contact['ticket_matching_emails']
         ))
         connection.commit()
-        entry_count += 1
+        ENTRY_COUNT += 1
 
-    print(f'Page {page} processed.')
-    page += 1
-    if page <= total_pages:
-        data = get_contacts(page)
+    print(f'Page {PAGE} processed.')
+    PAGE += 1
+    if PAGE <= total_pages:
+        data = get_contacts(PAGE)
 
 # Check if the total entries match the expected count
-if entry_count != total_entries:
-    print(f'Warning: Expected {total_entries} entries but found {entry_count}.')
+if ENTRY_COUNT != total_entries:
+    print(f'Warning: Expected {total_entries} entries but found {ENTRY_COUNT}.')
 
 print("Contacts successfully inserted into the database.")
