@@ -1,14 +1,15 @@
-'''library for db connection functions'''
+"""library for db connection functions"""
 import mysql.connector
 
 
 def create_contact_table_if_not_exists(config):
-    '''create the contact db if it desn't already exist'''
+    """create the contact db if it desn't already exist"""
     connection = mysql.connector.connect(**config)
     cursor = connection.cursor()
 
     # Create the contacts table if not exists
-    cursor.execute('''CREATE TABLE IF NOT EXISTS contacts (
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS contacts (
             id INT PRIMARY KEY,
             name VARCHAR(255),
             address1 VARCHAR(255),
@@ -34,6 +35,6 @@ def create_contact_table_if_not_exists(config):
             processed_mobile VARCHAR(255),
             ticket_matching_emails VARCHAR(255)
         )
-        ''')
+        """
+    )
     return cursor, connection
-
