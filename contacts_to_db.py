@@ -7,6 +7,7 @@ from api_requests_library import get_contacts
 from api_requests_library import update_last_ran
 from api_requests_library import check_last_ran
 from api_requests_library import get_timestamp_code
+from db_requests_library import create_contact_table_if_not_exists
 # from api_requests_library import compare_db_to_rs
 
 # Load timestamp
@@ -19,37 +20,7 @@ CONNECTION = None
 
 # Connect to the database
 try:
-    CONNECTION = mysql.connector.connect(**config)
-    cursor = CONNECTION.cursor()
-
-    # Create the contacts table if not exists
-    cursor.execute('''CREATE TABLE IF NOT EXISTS contacts (
-            id INT PRIMARY KEY,
-            name VARCHAR(255),
-            address1 VARCHAR(255),
-            address2 VARCHAR(255),
-            city VARCHAR(255),
-            state VARCHAR(255),
-            zip VARCHAR(255),
-            email VARCHAR(255),
-            phone VARCHAR(255),
-            mobile VARCHAR(255),
-            latitude FLOAT,
-            longitude FLOAT,
-            customer_id INT,
-            account_id INT,
-            notes TEXT,
-            created_at DATETIME,
-            updated_at DATETIME,
-            vendor_id INT,
-            title VARCHAR(255),
-            opt_out BOOLEAN,
-            extension VARCHAR(50),
-            processed_phone VARCHAR(255),
-            processed_mobile VARCHAR(255),
-            ticket_matching_emails VARCHAR(255)
-        )
-        ''')
+    cursor, CONNECTION = create_contact_table_if_not_exists(config)
     # Fetch data from the API
     headers = {'Authorization': f'Bearer {env_library.api_key_contact}'}
 
@@ -59,7 +30,9 @@ try:
     TOTAL_ENTRIES = 0
     ENTRY_COUNT = 0
     DB_ROWS = 0
+    ALL_DATA = []
 
+    # Get 1st Page, then check to make sure not null
     data = get_contacts(PAGE)
     if data is not None:
         TOTAL_PAGES = data['meta']['total_pages']
@@ -67,10 +40,16 @@ try:
     else:
         print("Error getting contact data")
 
-        # Iterate through the pages
+    # Iterate through the pages
     while PAGE <= TOTAL_PAGES:
         if data is not None:
-            for contact in data['contacts']:
+            ALL_DATA.extend(data['contacts'])
+            print(f'Added in page # {PAGE}')
+            PAGE += 1
+    print(f'Recieved all data, {TOTAL_PAGES} page(s)')
+
+    for contact in ALL_DATA:
+            #for contact in data['contacts']:
                 # fix dates for the DB
                 created_at_str = contact['created_at']
                 formatted_created_at = format_date_fordb(created_at_str)
@@ -125,24 +104,15 @@ try:
                     ))
                     CONNECTION.commit()
                     ENTRY_COUNT += 1
-
-            print(f'Page {PAGE} / {TOTAL_PAGES} processed.')
-            PAGE += 1
-            if PAGE <= TOTAL_PAGES:
-                data = get_contacts(PAGE)
-                if data is None:
-                    print(f"Error getting data on {PAGE}")
-                    break
-            else:
+                    
                 print(f"All data received from {TOTAL_PAGES} page(s)")
                 QUERY = "SELECT COUNT(*) FROM contacts"
                 cursor.execute(QUERY)
                 result = cursor.fetchone()
                 if result is not None:
                     DB_ROWS = result[0]
-                break
-
-        # Check if the total entries match the expected count
+                
+    # Check if the total entries match the expected count
     if ENTRY_COUNT != TOTAL_ENTRIES:
         print(
             f'Warning: Made changes to {ENTRY_COUNT} entries but found, '
