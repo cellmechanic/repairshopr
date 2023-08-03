@@ -7,7 +7,10 @@ from api_requests_library import get_contacts
 from api_requests_library import update_last_ran
 from api_requests_library import check_last_ran
 from api_requests_library import get_timestamp_code
+from api_requests_library import compare_id_sums
+from api_requests_library import move_deleted_contacts_to_deleted_table
 from db_requests_library import create_contact_table_if_not_exists
+
 
 
 # from api_requests_library import compare_db_to_rs
@@ -59,6 +62,12 @@ try:
 
     print(f'Recieved all data, {TOTAL_PAGES} page(s)')
     print(f'Total rows in ALL_DATA: {len(ALL_DATA)}')
+
+    # Check ID sums to see if anything was deleted
+    DELETED = False
+    deleted = compare_id_sums(cursor, ALL_DATA)
+    if not deleted:
+        move_deleted_contacts_to_deleted_table(cursor, CONNECTION, ALL_DATA)
 
     for contact in ALL_DATA:
             #for contact in data['contacts']:

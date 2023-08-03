@@ -36,3 +36,4 @@ def create_contact_table_if_not_exists(config):
         )
         ''')
     return cursor, connection
+
