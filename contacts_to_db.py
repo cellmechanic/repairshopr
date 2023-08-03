@@ -8,6 +8,8 @@ from api_requests_library import update_last_ran
 from api_requests_library import check_last_ran
 from api_requests_library import get_timestamp_code
 from db_requests_library import create_contact_table_if_not_exists
+
+
 # from api_requests_library import compare_db_to_rs
 
 # Load timestamp
@@ -43,10 +45,20 @@ try:
     # Iterate through the pages
     while PAGE <= TOTAL_PAGES:
         if data is not None:
+            print(f'Adding {len(data["contacts"])} contacts from page {PAGE}')
             ALL_DATA.extend(data['contacts'])
             print(f'Added in page # {PAGE}')
             PAGE += 1
+            if PAGE <= TOTAL_PAGES:
+                data = get_contacts(PAGE)
+            else:
+                break
+        else:
+            print("Error getting contact data")
+            break
+
     print(f'Recieved all data, {TOTAL_PAGES} page(s)')
+    print(f'Total rows in ALL_DATA: {len(ALL_DATA)}')
 
     for contact in ALL_DATA:
             #for contact in data['contacts']:
@@ -62,8 +74,8 @@ try:
             print(
                 f"Contact {contact['id']} has been updated since last run.")
             cursor.execute('''
-                INSERT INTO contacts (id, name, address1, address2, city, state, zip, email, phone, mobile, latitude, longitude, customer_id, 
-                        account_id, notes, created_at, updated_at, vendor_id, title, opt_out, extension, processed_phone, 
+                INSERT INTO contacts (id, name, address1, address2, city, state, zip, email, phone, mobile, latitude, longitude, customer_id,
+                        account_id, notes, created_at, updated_at, vendor_id, title, opt_out, extension, processed_phone,
                         processed_mobile, ticket_matching_emails)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON DUPLICATE KEY UPDATE
@@ -104,14 +116,13 @@ try:
             ))
             CONNECTION.commit()
             ENTRY_COUNT += 1
-           
-    print(f"All data received from {TOTAL_PAGES} page(s)")
+            print(f"All data received from {TOTAL_PAGES} page(s)")
     QUERY = "SELECT COUNT(*) FROM contacts"
     cursor.execute(QUERY)
     result = cursor.fetchone()
     if result is not None:
         DB_ROWS = result[0]
-               
+
     # Check if the total entries match the expected count
     if ENTRY_COUNT != TOTAL_ENTRIES:
         print(
