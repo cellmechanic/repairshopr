@@ -1,8 +1,7 @@
 """library for diff API requests"""
 import time
 import requests
-import env_library  # Make sure that you import the necessary variables from env_library
-
+from library import env_library
 
 def get_contacts(page):
     """api request"""
