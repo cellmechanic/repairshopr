@@ -1,10 +1,10 @@
 """Getting RS Contacts"""
+
 from datetime import datetime
-import sys
-sys.path.append("/home/justin/repairshopr/library")
-import env_library
-from fix_dates_library import format_date_fordb
-from api_requests_library import (
+import mysql.connector
+import library.env_library as env_library
+from library.fix_dates_library import format_date_fordb
+from library.api_requests_library import (
     get_contacts,
     update_last_ran,
     check_last_ran,
@@ -12,16 +12,15 @@ from api_requests_library import (
     compare_id_sums,
     move_deleted_contacts_to_deleted_table,
 )
-from db_requests_library import create_contact_table_if_not_exists
-import mysql.connector
-
-# from api_requests_library import compare_db_to_rs
+from library.db_requests_library import (
+    create_contact_table_if_not_exists,
+)
 
 # Load timestamp
 TIMESTAMP_FILE = "last_run_contacts.txt"
 last_run_timestamp_unix = check_last_ran(TIMESTAMP_FILE)
 
-# Database configurationø
+# Database configurations
 
 config = env_library.config
 CONNECTION = None
@@ -29,7 +28,7 @@ CONNECTION = None
 # Connect to the database
 try:
     cursor, CONNECTION = create_contact_table_if_not_exists(config)
-    # Fetch data from the APIx
+    # Fetch data from the API
     headers = {"Authorization": f"Bearer {env_library.api_key_contact}"}
 
     # Start fetching contacts from page 1
@@ -167,11 +166,6 @@ try:
 
     print("Contacts successfully inserted into the database.")
     print(f"Made: {TOTAL_ENTRIES} updates")
-    print("Comparing DB to RS")
-    # try:
-    #    compare_db_to_rs(cursor,CONNECTION)
-    # except IOError as error:
-    #    print("error")
 
 except mysql.connector.Error as err:
     print(f"Database error {err}")

@@ -1,7 +1,9 @@
 """library for diff API requests"""
 import time
+from datetime import datetime
 import requests
 from library import env_library
+
 
 def get_contacts(page):
     """api request"""
@@ -16,6 +18,161 @@ def get_contacts(page):
     except requests.RequestException as error:
         print(f"Failed to get data for page {page}: {str(error)}")
         return None
+
+
+def get_invoice_lines(page):
+    """api request"""
+    url = f"{env_library.api_url_invoice}?page={page}"
+    headers = {"Authorization": f"Bearer {env_library.api_key_invoice}"}
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code != 200:
+            print(f"Error fetching contacts on page {page}: {response.text}")
+            return None
+        return response.json()
+    except requests.RequestException as error:
+        print(f"Failed to get data for page {page}: {str(error)}")
+        return None
+
+
+def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
+    """insert invoice lines"""
+
+    for item in items:
+        updated_at_str = item["updated_at"]
+        print(updated_at_str)
+        updated_at_unix = datetime.strptime(updated_at_str, "%Y-%m-%d %H:%M:%S")
+        updated_at_unix = int(updated_at_unix.timestamp())
+        print(updated_at_unix)
+        
+        # Check if the record exists and get the current updated_at value
+        cursor.execute(
+            "SELECT updated_at FROM invoice_items WHERE id = %s", (item["id"],)
+        )
+        existing_record = cursor.fetchone()
+        if updated_at_unix <= last_run_timestamp_unix:
+            continue
+        # Insert or update logic
+        if existing_record and updated_at_unix > existing_record[0]:
+            # If record exists and updated_at is greater, update it
+            print(f"Contact {item['id']} has been updated since last run.")
+            sql = """
+                UPDATE invoice_items SET
+                    created_at = %s,
+                    updated_at = %s,
+                    invoice_id = %s,
+                    item = %s,
+                    name = %s,
+                    cost = %s,
+                    price = %s,
+                    quantity = %s,
+                    product_id = %s,
+                    taxable = %s,
+                    discount_percent = %s,
+                    position = %s,
+                    invoice_bundle_id = %s,
+                    discount_dollars = %s,
+                    product_category = %s
+                WHERE id = %s
+            """
+            values = (
+                # Add your values here
+            )
+            cursor.execute(sql, values)
+        elif not existing_record:
+            # If record doesn't exist, insert it
+            print(f"Inserting new contact {item['id']}.")
+            sql = """
+                INSERT INTO invoice_items (
+                    id, created_at, updated_at, invoice_id, item, name,
+                    cost, price, quantity, product_id, taxable, discount_percent,
+                    position, invoice_bundle_id, discount_dollars, product_category
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            values = (
+                # Add your values here
+            )
+            cursor.execute(sql, values)
+
+    for item in items:
+        # Check if the record exists and get the current updated_at value
+        cursor.execute(
+            "SELECT updated_at FROM invoice_items WHERE id = %s", (item["id"],)
+        )
+        existing_record = cursor.fetchone()
+
+        # Insert or update logic
+        if existing_record:
+            # If record exists and updated_at is greater, update it
+            if item["updated_at"] > existing_record[0]:
+                print(f"Contact {item['id']} has been updated since last run.")
+                sql = """
+                    UPDATE invoice_items SET
+                        created_at = %s,
+                        updated_at = %s,
+                        invoice_id = %s,
+                        item = %s,
+                        name = %s,
+                        cost = %s,
+                        price = %s,
+                        quantity = %s,
+                        product_id = %s,
+                        taxable = %s,
+                        discount_percent = %s,
+                        position = %s,
+                        invoice_bundle_id = %s,
+                        discount_dollars = %s,
+                        product_category = %s
+                    WHERE id = %s
+                """
+                values = (
+                    item["created_at"],
+                    item["updated_at"],
+                    item["invoice_id"],
+                    item["item"],
+                    item["name"],
+                    item["cost"],
+                    item["price"],
+                    item["quantity"],
+                    item["product_id"],
+                    item["taxable"],
+                    item["discount_percent"],
+                    item["position"],
+                    item["invoice_bundle_id"],
+                    item["discount_dollars"],
+                    item["product_category"],
+                    item["id"],
+                )
+                cursor.execute(sql, values)
+        else:
+            # If record doesn't exist, insert it
+            print(f"Inserting new contact {item['id']}.")
+            sql = """
+                INSERT INTO invoice_items (
+                    id, created_at, updated_at, invoice_id, item, name,
+                    cost, price, quantity, product_id, taxable, discount_percent,
+                    position, invoice_bundle_id, discount_dollars, product_category
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            values = (
+                item["id"],
+                item["created_at"],
+                item["updated_at"],
+                item["invoice_id"],
+                item["item"],
+                item["name"],
+                item["cost"],
+                item["price"],
+                item["quantity"],
+                item["product_id"],
+                item["taxable"],
+                item["discount_percent"],
+                item["position"],
+                item["invoice_bundle_id"],
+                item["discount_dollars"],
+                item["product_category"],
+            )
+            cursor.execute(sql, values)
 
 
 def update_last_ran(timestamp_file):

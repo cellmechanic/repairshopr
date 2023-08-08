@@ -38,3 +38,33 @@ def create_contact_table_if_not_exists(config):
         """
     )
     return cursor, connection
+
+
+def create_invoice_items_table_if_not_exists(config):
+    """Create the invoice_items table if it doesn't already exist."""
+    connection = mysql.connector.connect(**config)
+    cursor = connection.cursor()
+
+    # Create the invoice_items table if not exists
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS invoice_items (
+            id INT PRIMARY KEY,
+            created_at DATETIME,
+            updated_at DATETIME,
+            invoice_id INT,
+            item VARCHAR(1024),
+            name VARCHAR(1024),
+            cost DECIMAL(10, 2),
+            price DECIMAL(10, 2),
+            quantity DECIMAL(10, 2),
+            product_id INT,
+            taxable BOOLEAN,
+            discount_percent DECIMAL(5, 2),
+            position INT,
+            invoice_bundle_id INT,
+            discount_dollars DECIMAL(10, 2),
+            product_category VARCHAR(255)
+        )
+        """
+    )
+    return cursor, connection
