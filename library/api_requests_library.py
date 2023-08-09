@@ -44,7 +44,7 @@ def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
         updated_at_unix = datetime.strptime(updated_at_str, "%Y-%m-%d %H:%M:%S")
         updated_at_unix = int(updated_at_unix.timestamp())
         print(updated_at_unix)
-        
+
         # Check if the record exists and get the current updated_at value
         cursor.execute(
             "SELECT updated_at FROM invoice_items WHERE id = %s", (item["id"],)
