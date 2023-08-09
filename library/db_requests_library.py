@@ -53,7 +53,7 @@ def create_invoice_items_table_if_not_exists(config):
             updated_at DATETIME,
             invoice_id INT,
             item VARCHAR(1024),
-            name VARCHAR(1024),
+            name VARCHAR(2048),
             cost DECIMAL(10, 2),
             price DECIMAL(10, 2),
             quantity DECIMAL(10, 2),

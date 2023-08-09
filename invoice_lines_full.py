@@ -45,15 +45,15 @@ else:
 print(f"Total pages: {TOTAL_PAGES}")
 print("Created invoice_items table")
 # TOTAL_PAGES + 1
-for page in range(CURRENT_PAGE, 2):
+for page in range(1, TOTAL_PAGES + 1):
     data = get_invoice_lines(page)
     if data is not None:
         ALL_DATA.extend(data["line_items"])
-        print(f"Added in page # {page}")
+        print(f"{datetime.now()} : Added in page # {page}")
     else:
         print("Error getting line items data")
         break
-    time.sleep(1 / 3)
+    time.sleep(4 / 128)
 
 for line_items in ALL_DATA:
     created_at_str = line_items["created_at"]
@@ -67,6 +67,7 @@ for line_items in ALL_DATA:
     formatted_updated_at = format_date_fordb(updated_at_str)
     line_items["updated_at"] = formatted_updated_at
 
+print(f"Number of entries to consider for DB: {len(ALL_DATA)}")
 insert_invoice_lines(cursor, ALL_DATA, last_run_timestamp_unix)
 CONNECTION.commit()
 CONNECTION.close()
