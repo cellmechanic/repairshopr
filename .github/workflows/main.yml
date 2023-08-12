@@ -19,12 +19,7 @@ jobs:
 
     - name: Deploy to Production
       run: echo $PRODUCTION_USER
-      run: echo ${{ vars.PRODUCTION_USER }}
-      run: |
-        echo "${{ secrets.PRODUCTION_SSH_KEY }}" > prod_key
-        chmod 600 prod_key
-        echo ${{ vars.PRODUCTION_USER }}
-        ssh -o StrictHostKeyChecking=no -i prod_key $PRODUCTION_USER@$PRODUCTION_SERVER
+
       shell: bash
 
   
