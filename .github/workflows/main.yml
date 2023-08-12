@@ -22,8 +22,6 @@ jobs:
           git pull origin master
           pip install --upgrade -r requirements.txt
         "
-      env:
-        PRODUCTION_SERVER: ${{ secrets.PRODUCTION_SERVER }}
-        PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
       shell: bash
+
   
