@@ -19,7 +19,7 @@ jobs:
         chmod 600 prod_key
         ssh -v -o StrictHostKeyChecking=no -i prod_key ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_SERVER }} "
           cd /home/repairshoprssh/repairshopr
-          git pull origin main
+          git pull origin master
           pip install --upgrade -r requirements.txt
         "
       env:
