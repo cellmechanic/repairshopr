@@ -17,6 +17,7 @@ from library.db_requests_library import (
 )
 
 # Load timestamp
+# test change
 TIMESTAMP_FILE = "last_run_contacts.txt"
 last_run_timestamp_unix = check_last_ran(TIMESTAMP_FILE)
 
