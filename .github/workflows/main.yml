@@ -17,7 +17,7 @@ jobs:
       run: |
         echo "${{ secrets.PRODUCTION_SSH_KEY }}" > prod_key
         chmod 600 prod_key
-        ssh -v -o StrictHostKeyChecking=no -i prod_key ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_SERVER }} "
+        ssh -o StrictHostKeyChecking=no -i prod_key ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_SERVER }} "
           cd /home/repairshoprssh/repairshopr
           git pull origin master
           pip install --upgrade -r requirements.txt
@@ -26,3 +26,4 @@ jobs:
         PRODUCTION_SERVER: ${{ secrets.PRODUCTION_SERVER }}
         PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
       shell: bash
+  
