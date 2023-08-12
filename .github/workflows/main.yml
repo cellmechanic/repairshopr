@@ -3,7 +3,7 @@ name: Deploy to Production
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   deploy:
@@ -13,25 +13,16 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.x'
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-
-    - name: Run Tests
-      run: python -m unittest
-
-    - name: Make deploy.sh executable
-      run: chmod +x deploy.sh
-
     - name: Deploy to Production
-      run: ./deploy.sh
+      run: |
+        echo "${{ secrets.PRODUCTION_SSH_KEY }}" > prod_key
+        chmod 600 prod_key
+        ssh -o StrictHostKeyChecking=no -i prod_key ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_SERVER }} "
+          cd /home/repairshoprssh/repairshopr
+          git pull origin main
+          pip install --upgrade -r requirements.txt
+        "
       env:
         PRODUCTION_SERVER: ${{ secrets.PRODUCTION_SERVER }}
         PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
-        PRODUCTION_SSH_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+      shell: bash
