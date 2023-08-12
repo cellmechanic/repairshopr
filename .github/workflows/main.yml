@@ -6,8 +6,8 @@ on:
       - master
 
 env:
-  PRODUCTION_SERVER: ${{ vars.PRODUCTION_SERVER }}
-  PRODUCTION_USER: ${{ vars.PRODUCTION_USER }}
+  PRODUCTION_SERVER: '${{ vars.PRODUCTION_SERVER }}'
+  PRODUCTION_USER: '${{ vars.PRODUCTION_USER }}'
 
 jobs:
   deploy:
@@ -18,7 +18,7 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Deploy to Production
-      run: echo "this is prod key ${{ secrets.PRODUCTION_USER }}"
+      run: echo "this is prod key '${{ secrets.PRODUCTION_USER }}'"
 
       shell: bash
 
