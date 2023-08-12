@@ -6,8 +6,8 @@ on:
       - master
 
 env:
-  PRODUCTION_SERVER: ${{ vars.PRODUCTION_SERVER }}
-  PRODUCTION_USER: ${{ vars.PRODUCTION_USER }}
+  PRODUCTION_SERVER: ${{ secrets.PRODUCTION_SERVER }}
+  PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
 
 jobs:
   deploy:
