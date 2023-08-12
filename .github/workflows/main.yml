@@ -17,7 +17,7 @@ jobs:
       run: |
         echo "${{ secrets.PRODUCTION_SSH_KEY }}" > prod_key
         chmod 600 prod_key
-        echo "${{ vars.PRODUCTION_USER }}"
+        echo ${{ vars.PRODUCTION_USER }}
         ssh -o StrictHostKeyChecking=no -i prod_key ${{ vars.PRODUCTION_USER }}@${{ vars.PRODUCTION_SERVER }}
       shell: bash
 
