@@ -27,7 +27,7 @@ def get_invoice_lines(page):
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code != 200:
-            print(f"Error fetching contacts on page {page}: {response.text}")
+            print(f"Error fetching invoice line items on page {page}: {response.text}")
             return None
         return response.json()
     except requests.RequestException as error:
