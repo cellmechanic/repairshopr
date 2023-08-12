@@ -5,6 +5,10 @@ on:
     branches:
       - master
 
+env:
+  PRODUCTION_SERVER: ${{ vars.PRODUCTION_SERVER }}
+  PRODUCTION_USER: ${{ vars.PRODUCTION_USER }}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -17,8 +21,8 @@ jobs:
       run: |
         echo "${{ secrets.PRODUCTION_SSH_KEY }}" > prod_key
         chmod 600 prod_key
-        echo ${{ vars.PRODUCTION_USER }}
-        ssh -o StrictHostKeyChecking=no -i prod_key ${{ vars.PRODUCTION_USER }}@${{ vars.PRODUCTION_SERVER }}
+        echo $PRODUCTION_USER
+        ssh -o StrictHostKeyChecking=no -i prod_key $PRODUCTION_USER@$PRODUCTION_SERVER
       shell: bash
 
   
