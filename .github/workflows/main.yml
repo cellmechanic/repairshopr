@@ -18,7 +18,7 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Deploy to Production
-      run: echo ${{ PRODUCTION_USER }}
+      run: echo ${{ vars.PRODUCTION_USER }}
 
       shell: bash
 
