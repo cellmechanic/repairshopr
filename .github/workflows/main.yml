@@ -15,9 +15,10 @@ jobs:
     
     - name: Deploy to Production  
       run: |
-        echo "${{ secrets.PRODUCTION_SSH_KEY }}" > prod_key
-        chmod 600 prod_key
-        ssh -vvv -i prod_key ${{ vars.PRODUCTION_USER }}@${{ vars.PRODUCTION_SERVER }} 
+        echo "${{ secrets.PRODUCTION_SSH_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh ${{ vars.PRODUCTION_USER }}@${{ vars.PRODUCTION_SERVER }} 
+        whoami
       shell: bash
 
   
