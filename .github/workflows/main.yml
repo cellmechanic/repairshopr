@@ -12,7 +12,7 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # environment: master don't think I need this anymore.
+    environment: master
     steps:
     - name: Create SSH key
       run: |
