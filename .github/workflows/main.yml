@@ -26,5 +26,5 @@ jobs:
       shell: bash
 
     - name: Deploy to Production
-      run: ssh -vvv -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "whoami"
+      run: ssh -vvv -o StrictHostKeyChecking=no ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "whoami"
       shell: bash
