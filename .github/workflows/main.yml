@@ -12,7 +12,7 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: master
+    # environment: master don't think I need this anymore.
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -22,9 +22,21 @@ jobs:
         mkdir -p ~/.ssh
         echo "${{ secrets.NEW_PRODUCTION_SSH_KEY }}" > ~/.ssh/id_ed25519
         chmod 600 ~/.ssh/id_ed25519
-        ls -la ~/.ssh
       shell: bash
 
-    - name: Deploy to Production
-      run: ssh -o StrictHostKeyChecking=no ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "sudo whoami"
+    - name: Add SSH Host
+      run: |
+        ssh-keyscan -H ${{ env.PRODUCTION_SERVER }} >> ~/.ssh/known_hosts
       shell: bash
+
+    - name: Clone
+      run: |
+        ssh ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "git clone https://github.com/cellmechanic/repairshopr.git 
+        /home/repairshoprssh/production"
+      shell: bash
+
+    - name: Install dependencies
+      run: |
+        ssh ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "cd /home/repairshoprssh/production; pip install -r requirements.txt"
+      shell: bash
+
