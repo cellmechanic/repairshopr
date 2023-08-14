@@ -17,13 +17,19 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Create SSH key
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.PRODUCTION_SSH_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ls -la ~/.ssh
-      shell: bash
+    - name: Install SSH key
+      uses: shimataro/ssh-key-action@v2
+      with:
+        key: ${{ secrets.PRODUCTION_SSH_KEY }}
+        name: id_rsa # optional
+
+    #- name: Create SSH key
+    #  run: |
+    #    mkdir -p ~/.ssh
+    #    echo "${{ secrets.PRODUCTION_SSH_KEY }}" > ~/.ssh/id_rsa
+    #    chmod 600 ~/.ssh/id_rsa
+    #    ls -la ~/.ssh
+    #  shell: bash
 
     - name: Deploy to Production
       run: ssh -vvv -o StrictHostKeyChecking=no ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "whoami"
