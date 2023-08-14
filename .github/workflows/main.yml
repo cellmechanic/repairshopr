@@ -20,8 +20,8 @@ jobs:
     - name: Create SSH key
       run: |
         mkdir -p ~/.ssh
-        echo "${{ secrets.NEW_PRODUCTION_SSH_KEY }}" > ~/.ssh/id_rsa.key
-        chmod 600 ~/.ssh/id_rsa.key
+        echo "${{ secrets.NEW_PRODUCTION_SSH_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
         ls -la ~/.ssh
       shell: bash
 
