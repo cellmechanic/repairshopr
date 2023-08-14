@@ -31,7 +31,7 @@ jobs:
 
     - name: Clone & Install
       run: |
-        ssh -v ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "
+        ssh -vv ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "
         cd ~/production/repairshopr; \
         git pull; \ 
         source venv/bin/activate; \
