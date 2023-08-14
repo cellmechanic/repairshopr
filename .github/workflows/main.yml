@@ -32,5 +32,5 @@ jobs:
       shell: bash
 
     - name: Deploy to Production
-      run: ssh ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "whoami"
+      run: ssh -i ~/.ssh/id_rsa ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "whoami"
       shell: bash
