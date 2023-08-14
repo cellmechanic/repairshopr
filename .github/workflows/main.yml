@@ -22,6 +22,7 @@ jobs:
         mkdir -p ~/.ssh
         echo "${{ secrets.PRODUCTION_SSH_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
+        ls -la ~/.ssh
       shell: bash
 
     - name: Deploy to Production
