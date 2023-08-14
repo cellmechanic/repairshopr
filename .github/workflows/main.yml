@@ -5,20 +5,32 @@ on:
     branches:
       - master
 
-jobs: 
+env:
+  PRODUCTION_SERVER: ${{ vars.PRODUCTION_SERVER }}
+  PRODUCTION_USER: ${{ vars.PRODUCTION_USER }}
+
+jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: master
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
-    
-    - name: Deploy to Production  
+
+    - name: Debug network to production server
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y traceroute
+        traceroute ${{ env.PRODUCTION_SERVER }}
+      shell: bash
+
+    - name: Create SSH key
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.PRODUCTION_SSH_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh -vvv -o StrictHostKeyChecking=no ${{ vars.PRODUCTION_USER }}@${{ vars.PRODUCTION_SERVER }} "whoami"
       shell: bash
 
-  
+    - name: Deploy to Production
+      run: ssh -o StrictHostKeyChecking=no ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "whoami"
+      shell: bash
