@@ -5,15 +5,14 @@ on:
     branches:
       - master
 
-env:
-  enviroment: master
+env:  
   PRODUCTION_SERVER: ${{ vars.PRODUCTION_SERVER }}
   PRODUCTION_USER: ${{ vars.PRODUCTION_USER }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    environment: master
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
