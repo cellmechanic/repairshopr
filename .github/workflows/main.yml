@@ -32,10 +32,10 @@ jobs:
     - name: Clone & Install
       run: |
         ssh ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "
-        cd ~/production
-        git pull https://github.com/cellmechanic/repairshopr
-        source venv/bin/activate
-        pip install --upgrade pip
+        cd ~/production; \
+        git pull; \ 
+        source venv/bin/activate; \
+        pip install --upgrade pip; \
         pip install -r requirements.txt"
       shell: bash
 
