@@ -32,7 +32,7 @@ jobs:
     - name: Clone
       run: |
         ssh ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "git clone https://github.com/cellmechanic/repairshopr
-        /home/repairshoprssh/production"
+        /home/repairshoprssh/production/"
       shell: bash
 
     - name: Install dependencies
