@@ -80,7 +80,6 @@ try:
             datetime.strptime(updated_at_str, get_timestamp_code()).timestamp()
         )
         formatted_updated_at = format_date_fordb(updated_at_str)
-        print(f"{updated_at_unix} / {last_run_timestamp_unix}")
         if updated_at_unix > last_run_timestamp_unix:
             print(f"Contact {contact['id']} has been updated since last run.")
             cursor.execute(

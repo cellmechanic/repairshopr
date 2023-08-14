@@ -160,8 +160,8 @@ def check_last_ran(timestamp_file):
                 print(f"Last ran @ {last_run_time_str}")
                 return int(last_run_timestamp_str)
             else:
-                print("no timestamp found, using now as time")
-                return int(time.time())
+                print("no timestamp found, using 0 as time")
+                return int(0)
     except FileNotFoundError:
         print("no timestamp file found, using now as time")
         return int(time.time())
