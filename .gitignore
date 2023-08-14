@@ -1,1 +1,4 @@
-.envgit rm --cached .env
+.env
+venv/
+old/
+virtual/
