@@ -6,6 +6,7 @@ on:
       - master
 
 env:
+  enviroment: master
   PRODUCTION_SERVER: ${{ vars.PRODUCTION_SERVER }}
   PRODUCTION_USER: ${{ vars.PRODUCTION_USER }}
 
