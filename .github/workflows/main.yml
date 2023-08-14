@@ -17,13 +17,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Debug network to production server
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y traceroute
-        traceroute ${{ env.PRODUCTION_SERVER }}
-      shell: bash
-
     - name: Create SSH key
       run: |
         mkdir -p ~/.ssh
