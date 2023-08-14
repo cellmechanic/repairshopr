@@ -29,14 +29,13 @@ jobs:
     - name: checkout
       uses: actions/checkout@v3
 
-    - name: Clone
+    - name: Clone & Install
       run: |
-        ssh ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "git clone https://github.com/cellmechanic/repairshopr
-        /home/repairshoprssh/production/"
+        ssh ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} 
+        cd ~/production
+        git clone https://github.com/cellmechanic/repairshopr
+        pip install -r requirements.txt
       shell: bash
 
-    - name: Install dependencies
-      run: |
-        ssh ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "cd /home/repairshoprssh/production; pip install -r requirements.txt"
-      shell: bash
+
 
