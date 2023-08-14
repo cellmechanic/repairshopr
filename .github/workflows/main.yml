@@ -31,10 +31,10 @@ jobs:
 
     - name: Clone & Install
       run: |
-        ssh ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} 
+        ssh ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "
         cd ~/production
         git clone https://github.com/cellmechanic/repairshopr
-        pip install -r requirements.txt
+        pip install -r requirements.txt"
       shell: bash
 
 
