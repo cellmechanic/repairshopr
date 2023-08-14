@@ -17,8 +17,7 @@ jobs:
       run: |
         echo "${{ secrets.PRODUCTION_SSH_KEY }}" > prod_key
         chmod 600 prod_key
-        ssh -vvv -i prod_key ${{ vars.PRODUCTION_USER }}@${{ vars.PRODUCTION_SERVER }} "
-          
+        ssh -vvv -i prod_key ${{ vars.PRODUCTION_USER }}@${{ vars.PRODUCTION_SERVER }} 
       shell: bash
 
   
