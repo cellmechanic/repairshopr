@@ -33,7 +33,9 @@ jobs:
       run: |
         ssh ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "
         cd ~/production
-        git clone https://github.com/cellmechanic/repairshopr
+        git pull https://github.com/cellmechanic/repairshopr
+        source venv/bin/activate
+        pip install --upgrade pip
         pip install -r requirements.txt"
       shell: bash
 
