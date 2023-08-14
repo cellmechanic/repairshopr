@@ -32,5 +32,5 @@ jobs:
       shell: bash
 
     - name: Deploy to Production
-      run: ssh -o StrictHostKeyChecking=no ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "whoami"
+      run: ssh ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "whoami"
       shell: bash
