@@ -14,9 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     # environment: master don't think I need this anymore.
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-
     - name: Create SSH key
       run: |
         mkdir -p ~/.ssh
@@ -29,9 +26,12 @@ jobs:
         ssh-keyscan -H ${{ env.PRODUCTION_SERVER }} >> ~/.ssh/known_hosts
       shell: bash
 
+    - name: checkout
+      uses: actions/checkout@v3
+
     - name: Clone
       run: |
-        ssh ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "git clone https://github.com/cellmechanic/repairshopr.git 
+        ssh ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_SERVER }} "git clone https://github.com/cellmechanic/repairshopr
         /home/repairshoprssh/production"
       shell: bash
 
