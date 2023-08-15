@@ -53,7 +53,7 @@ for page in range(1, TOTAL_PAGES + 1):
     else:
         print("Error getting line items data")
         break
-    time.sleep(4 / 128)
+    time.sleep(8 / 128)
 
 for line_items in ALL_DATA:
     created_at_str = line_items["created_at"]
