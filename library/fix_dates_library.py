@@ -4,5 +4,16 @@ from datetime import datetime
 
 def format_date_fordb(date_str):
     """pass in RS date, return MariaDB formatted"""
-    date_obj = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-    return date_obj.strftime('%Y-%m-%d %H:%M:%S')
+    if date_str is None:
+        return None
+    date_obj = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+    return date_obj.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def rs_to_unix_timestamp(rs_time):
+    """ Parse the datetime string into a datetime object in local timezone """
+    convert = datetime.fromisoformat(rs_time)
+
+    # Convert the datetime object to a UNIX timestamp
+    timestamp = int(convert.timestamp())
+    return timestamp

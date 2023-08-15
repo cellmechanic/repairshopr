@@ -1,8 +1,10 @@
 """library for diff API requests"""
 import time
+import json
 from datetime import datetime
 import requests
 from library import env_library
+from library.fix_dates_library import format_date_fordb, rs_to_unix_timestamp
 
 
 def get_contacts(page):
@@ -24,6 +26,21 @@ def get_invoice_lines(page):
     """api request"""
     url = f"{env_library.api_url_invoice}?page={page}"
     headers = {"Authorization": f"Bearer {env_library.api_key_invoice}"}
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code != 200:
+            print(f"Error fetching invoice line items on page {page}: {response.text}")
+            return None
+        return response.json()
+    except requests.RequestException as error:
+        print(f"Failed to get data for page {page}: {str(error)}")
+        return None
+
+
+def get_tickets(page):
+    """api request"""
+    url = f"{env_library.api_url_tickets}?page={page}"
+    headers = {"Authorization": f"Bearer {env_library.api_key_tickets}"}
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code != 200:
@@ -136,6 +153,105 @@ def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
     print(f"Added {added} new line items.")
 
 
+def insert_tickets(cursor, items, last_run_timestamp_unix):
+    """Insert or update tickets based on the items provided."""
+    added = 0
+    updated = 0
+    for item in items:
+        # Check if the record exists and get the current updated_at value
+        cursor.execute("SELECT updated_at FROM tickets WHERE id = %s", (item["id"],))
+        existing_record = cursor.fetchone()
+        print(f"processing ticket {item['id']}")
+        if existing_record:
+            if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
+                # If record exists and updated_at is greater, update it
+                print(last_run_timestamp_unix)
+                updated += 1
+                sql = """
+                    UPDATE tickets SET
+                        number = %s,
+                        subject = %s,
+                        created_at = %s,
+                        customer_id = %s,
+                        customer_business_then_name = %s,
+                        due_date = %s,
+                        resolved_at = %s,
+                        start_at = %s,
+                        end_at = %s,
+                        location_id = %s,
+                        problem_type = %s,
+                        status = %s,
+                        ticket_type_id = %s,
+                        properties = %s,
+                        user_id = %s,
+                        updated_at = %s,
+                        pdf_url = %s,
+                        priority = %s,
+                        comments = %s
+                    WHERE id = %s
+                """
+                values = (
+                    item["number"],
+                    item["subject"],
+                    format_date_fordb(item["created_at"]),
+                    item["customer_id"],
+                    item["customer_business_then_name"],
+                    format_date_fordb(item["due_date"]),
+                    format_date_fordb(item["resolved_at"]),
+                    item["start_at"],
+                    item["end_at"],
+                    item["location_id"],
+                    item["problem_type"],
+                    item["status"],
+                    item["ticket_type_id"],
+                    json.dumps(item.get("properties", {})),
+                    item["user_id"],
+                    format_date_fordb(item["updated_at"]),
+                    item["pdf_url"],
+                    item["priority"],
+                    json.dumps(item.get("comments", {})),
+                    item["id"],
+                )
+                cursor.execute(sql, values)
+        else:
+            # If record doesn't exist, insert it
+            added += 1
+            sql = """
+                INSERT INTO tickets (
+                    id, number, subject, created_at, customer_id, 
+                    customer_business_then_name, due_date, resolved_at, start_at,
+                    end_at, location_id, problem_type, status, ticket_type_id,
+                    properties, user_id, updated_at, pdf_url, priority, comments
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            values = (
+                item["id"],
+                item["number"],
+                item["subject"],
+                format_date_fordb(item["created_at"]),
+                item["customer_id"],
+                item["customer_business_then_name"],
+                format_date_fordb(item["due_date"]),
+                format_date_fordb(item["resolved_at"]),
+                item["start_at"],
+                item["end_at"],
+                item["location_id"],
+                item["problem_type"],
+                item["status"],
+                item["ticket_type_id"],
+                json.dumps(item.get("properties", {})),
+                item["user_id"],
+                format_date_fordb(item["updated_at"]),
+                item["pdf_url"],
+                item["priority"],
+                json.dumps(item.get("comments", {})),
+            )
+            print(values)
+            cursor.execute(sql, values)
+
+    print(f"Added {added} new tickets, updated {updated} existing tickets.")
+
+
 def update_last_ran(timestamp_file):
     """update the last time the script ran file, pass in the file"""
     try:
@@ -163,8 +279,8 @@ def check_last_ran(timestamp_file):
                 print("no timestamp found, using 0 as time")
                 return int(0)
     except FileNotFoundError:
-        print("no timestamp file found, using now as time")
-        return int(time.time())
+        print("no timestamp file found, using 0 as time, assuming rebuild")
+        return 0
 
 
 def get_timestamp_code():
