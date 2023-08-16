@@ -26,7 +26,6 @@ config = env_library.config
 CONNECTION = None
 cursor, CONNECTION = connect_to_db(config)
 create_contact_table_if_not_exists(cursor)
-# Connect to the database
 
 # Fetch data from the API
 headers = {"Authorization": f"Bearer {env_library.api_key_contact}"}
