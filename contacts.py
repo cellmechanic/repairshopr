@@ -1,9 +1,10 @@
 """Getting RS Contacts"""
 
 from datetime import datetime
+import time
 import mysql.connector
 import library.env_library as env_library
-from library.fix_date_time_library import format_date_fordb, get_timestamp_code
+from library.fix_date_time_library import format_date_fordb, get_timestamp_code, log_ts
 from library.api_requests_library import (
     get_contacts,
 )
@@ -12,6 +13,7 @@ from library.db_requests_library import (
     connect_to_db,
     compare_id_sums,
     move_deleted_contacts_to_deleted_table,
+    rate_limit
 )
 from library.timestamp_files import update_last_ran, check_last_ran
 
@@ -21,53 +23,54 @@ last_run_timestamp_unix = check_last_ran(TIMESTAMP_FILE)
 
 # Database configurations
 config = env_library.config
+CONNECTION = None
 cursor, CONNECTION = connect_to_db(config)
-
+create_contact_table_if_not_exists(cursor)
 # Connect to the database
-try:
-    cursor, CONNECTION = create_contact_table_if_not_exists(config)
-    # Fetch data from the API
-    headers = {"Authorization": f"Bearer {env_library.api_key_contact}"}
 
-    # Start fetching contacts from page 1
-    PAGE = 1
-    TOTAL_PAGES = 0
-    TOTAL_ENTRIES = 0
-    ENTRY_COUNT = 0
-    DB_ROWS = 0
-    ALL_DATA = []
+# Fetch data from the API
+headers = {"Authorization": f"Bearer {env_library.api_key_contact}"}
 
-    # Get 1st Page, then check to make sure not null
-    data = get_contacts(PAGE)
+# Start fetching contacts from page 1
+CURRENT_PAGE = 1
+TOTAL_PAGES = 0
+TOTAL_ENTRIES = 0
+ENTRY_COUNT = 0
+DB_ROWS = 0
+ALL_DATA = []
+
+# Get 1st Page, then check to make sure not null
+data = get_contacts(CURRENT_PAGE)
+if data is not None:
+    TOTAL_PAGES = data["meta"]["total_pages"]
+    TOTAL_ENTRIES = data["meta"]["total_entries"]
+else:
+    print(f"{log_ts()} Error getting contact data")
+
+# Iterate through all the pages
+for page in range(1, TOTAL_PAGES + 1):
+    data = get_contacts(page)
     if data is not None:
-        TOTAL_PAGES = data["meta"]["total_pages"]
-        TOTAL_ENTRIES = data["meta"]["total_entries"]
+        ALL_DATA.extend(data["contacts"])
+        print(f"{log_ts()} Added in page # {page}")
     else:
-        print("Error getting contact data")
+        print(f"{log_ts()} Error getting tickets data")
+        break
+    time.sleep(rate_limit())
 
-    # Iterate through the pages
-    while PAGE <= TOTAL_PAGES:
-        if data is not None:
-            print(f'Adding {len(data["contacts"])} contacts from page {PAGE}')
-            ALL_DATA.extend(data["contacts"])
-            print(f"Added in page # {PAGE}")
-            PAGE += 1
-            if PAGE <= TOTAL_PAGES:
-                data = get_contacts(PAGE)
-            else:
-                break
-        else:
-            print("Error getting contact data")
-            break
+print(f"{log_ts()} Recieved all data, {TOTAL_PAGES} page(s)")
+print(f"{log_ts()} Total rows in ALL_DATA: {len(ALL_DATA)}")
 
-    print(f"Recieved all data, {TOTAL_PAGES} page(s)")
-    print(f"Total rows in ALL_DATA: {len(ALL_DATA)}")
+# Check ID sums to see if anything was deleted
+DELETED = False
+deleted = compare_id_sums(cursor, ALL_DATA)
+if not deleted:
+    move_deleted_contacts_to_deleted_table(cursor, CONNECTION, ALL_DATA)
 
-    # Check ID sums to see if anything was deleted
-    DELETED = False
-    deleted = compare_id_sums(cursor, ALL_DATA)
-    if not deleted:
-        move_deleted_contacts_to_deleted_table(cursor, CONNECTION, ALL_DATA)
+try:
+
+
+
 
     for contact in ALL_DATA:
         created_at_str = contact["created_at"]
@@ -78,7 +81,9 @@ try:
         )
         formatted_updated_at = format_date_fordb(updated_at_str)
         if updated_at_unix > last_run_timestamp_unix:
-            print(f"Contact {contact['id']} has been updated since last run.")
+            print(
+                f"{log_ts()} Contact {contact['id']} has been updated since last run."
+            )
             cursor.execute(
                 """
                 INSERT INTO contacts (id, name, address1, address2, city, state, zip, 
@@ -144,7 +149,7 @@ try:
             )
             CONNECTION.commit()
             ENTRY_COUNT += 1
-            print(f"All data received from {TOTAL_PAGES} page(s)")
+            print(f"{log_ts()} All data received from {TOTAL_PAGES} page(s)")
     QUERY = "SELECT COUNT(*) FROM contacts"
     cursor.execute(QUERY)
     result = cursor.fetchone()
@@ -154,19 +159,20 @@ try:
     # Check if the total entries match the expected count
     if ENTRY_COUNT != TOTAL_ENTRIES:
         print(
+            f"{log_ts()} "
             f"Warning: Made changes to {ENTRY_COUNT} entries but found, "
             f"Meta Rows: {TOTAL_ENTRIES}."
         )
-        print(f"Row Count from DB is: {DB_ROWS}")
+        print(f"{log_ts()} Row Count from DB is: {DB_ROWS}")
 
-    print("Contacts successfully inserted into the database.")
-    print(f"Made: {TOTAL_ENTRIES} updates")
+    print(f"{log_ts()} Contacts successfully inserted into the database.")
+    print(f"{log_ts()} Made: {TOTAL_ENTRIES} updates")
 
 except mysql.connector.Error as err:
-    print(f"Database error {err}")
+    print(f"{log_ts()} Database error {err}")
 finally:
     if CONNECTION and CONNECTION.is_connected():
         CONNECTION.close()
         update_last_ran(TIMESTAMP_FILE)
 
-print("Database connection closed.")
+print(f"{log_ts()} Database connection closed.")

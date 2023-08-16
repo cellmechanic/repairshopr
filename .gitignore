@@ -2,3 +2,7 @@
 venv/
 old/
 virtual/
+last_run_contacts.txt
+last_run_invoice_lines_updates.txt
+last_run_invoice_lines.txt
+last_run_tickets_full.txt

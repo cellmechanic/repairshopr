@@ -2,15 +2,20 @@
 from datetime import datetime
 import json
 import mysql.connector
-from library.fix_date_time_library import rs_to_unix_timestamp, format_date_fordb
+from library.fix_date_time_library import (
+    rs_to_unix_timestamp,
+    format_date_fordb,
+    log_ts,
+)
 
 
-def create_contact_table_if_not_exists(config):
+def rate_limit():
+    """current rate limit setting"""
+    return 8 / 128
+
+
+def create_contact_table_if_not_exists(cursor):
     """create the contact db if it desn't already exist"""
-    connection = mysql.connector.connect(**config)
-    cursor = connection.cursor()
-
-    # Create the contacts table if not exists
     cursor.execute(
         """CREATE TABLE IF NOT EXISTS contacts (
             id INT PRIMARY KEY,
@@ -40,7 +45,6 @@ def create_contact_table_if_not_exists(config):
         )
         """
     )
-    return cursor, connection
 
 
 def create_invoice_items_table_if_not_exists(config):
@@ -408,13 +412,13 @@ def compare_id_sums(cursor, data):
     contacts_sum = cursor.fetchone()[0]
 
     sum_of_ids_api = sum(contact["id"] for contact in data)
-    print(f"Sum of IDs from API: {sum_of_ids_api}")
-    print(f"Sum of IDs from DB: {contacts_sum}")
+    print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
+    print(f"{log_ts()} Sum of IDs from DB: {contacts_sum}")
 
     if sum_of_ids_api == contacts_sum:
-        print("The sum of IDs matches.")
+        print(f"{log_ts()} Both ID sums are matching.")
     else:
-        print("The sum of IDs does not match.")
+        print(f"{log_ts()} The sum of IDs does not match.")
 
     return sum_of_ids_api == contacts_sum
 

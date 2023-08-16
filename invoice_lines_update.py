@@ -23,7 +23,6 @@ cursor, CONNECTION = create_invoice_items_table_if_not_exists(config)
 
 # Fetch data from the env file for API
 headers = {"Authorization": f"Bearer {env_library.api_key_invoice}"}
-update_last_ran(TIMESTAMP_FILE)
 
 # Start fetching line items from the end
 TOTAL_PAGES = 0
@@ -89,3 +88,4 @@ print(f"Number of entries to consider for DB: {len(ALL_DATA)}")
 insert_invoice_lines(cursor, ALL_DATA, last_run_timestamp_unix)
 CONNECTION.commit()
 CONNECTION.close()
+update_last_ran(TIMESTAMP_FILE)

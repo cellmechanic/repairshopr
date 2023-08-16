@@ -27,7 +27,6 @@ create_comments_table_if_not_exists(cursor)
 
 # Fetch data from the env file for API
 headers = {"Authorization": f"Bearer {env_library.api_key_tickets}"}
-update_last_ran(TIMESTAMP_FILE)
 
 # Meta vars
 CURRENT_PAGE = 1
@@ -60,3 +59,4 @@ insert_tickets(cursor, ALL_DATA, last_run_timestamp_unix)
 insert_comments(cursor, ALL_DATA, last_run_timestamp_unix)
 CONNECTION.commit()
 CONNECTION.close()
+update_last_ran(TIMESTAMP_FILE)
