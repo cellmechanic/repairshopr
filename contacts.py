@@ -21,6 +21,7 @@ from library.timestamp_files import update_last_ran, check_last_ran
 # Load timestamp
 TIMESTAMP_FILE = "last_run_contacts.txt"
 last_run_timestamp_unix = check_last_ran(TIMESTAMP_FILE)
+print(f"{log_ts()} Last ran: {last_run_timestamp_unix}")
 
 # Database configurations
 config = env_library.config

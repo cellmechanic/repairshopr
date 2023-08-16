@@ -402,9 +402,12 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
                         item["processed_phone"],
                         item["processed_mobile"],
                         item["ticket_matching_emails"],
+                        item["id"],
                     )
+                print(values)
+                print(sql)
                 cursor.execute(sql, values)
-                print(f"{log_ts()} All data received from {(items.len)/4} page(s)")
+                print(f"{log_ts()} All data received from {len(items)%25} page(s)")
         else:
             added += 1
             sql = """
