@@ -1,10 +1,8 @@
 """Getting RS Contacts"""
 
-from datetime import datetime
 import time
-import mysql.connector
 import library.env_library as env_library
-from library.fix_date_time_library import format_date_fordb, get_timestamp_code, log_ts
+from library.fix_date_time_library import log_ts
 from library.api_requests_library import (
     get_contacts,
 )
