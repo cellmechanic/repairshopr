@@ -13,7 +13,8 @@ from library.db_requests_library import (
     connect_to_db,
     compare_id_sums,
     move_deleted_contacts_to_deleted_table,
-    rate_limit
+    rate_limit,
+    insert_contacts,
 )
 from library.timestamp_files import update_last_ran, check_last_ran
 
@@ -34,7 +35,6 @@ headers = {"Authorization": f"Bearer {env_library.api_key_contact}"}
 CURRENT_PAGE = 1
 TOTAL_PAGES = 0
 TOTAL_ENTRIES = 0
-ENTRY_COUNT = 0
 DB_ROWS = 0
 ALL_DATA = []
 
@@ -66,112 +66,23 @@ deleted = compare_id_sums(cursor, ALL_DATA)
 if not deleted:
     move_deleted_contacts_to_deleted_table(cursor, CONNECTION, ALL_DATA)
 
-try:
+insert_contacts(cursor, ALL_DATA, last_run_timestamp_unix)
 
+# Validate data / totals
+QUERY = "SELECT COUNT(*) FROM contacts"
+cursor.execute(QUERY)
+result = cursor.fetchone()
+if result is not None:
+    DB_ROWS = result[0]
 
+# Check if the total entries match the expected count
+if DB_ROWS == TOTAL_ENTRIES:
+    print(f"{log_ts()} Meta Rows: {TOTAL_ENTRIES}.")
+    print(f"{log_ts()} Row Count from DB is: {DB_ROWS}")
+else:
+    print(f"{log_ts()} ROW MISMATCH")
 
-
-    for contact in ALL_DATA:
-        created_at_str = contact["created_at"]
-        formatted_created_at = format_date_fordb(created_at_str)
-        updated_at_str = contact["updated_at"]
-        updated_at_unix = int(
-            datetime.strptime(updated_at_str, get_timestamp_code()).timestamp()
-        )
-        formatted_updated_at = format_date_fordb(updated_at_str)
-        if updated_at_unix > last_run_timestamp_unix:
-            print(
-                f"{log_ts()} Contact {contact['id']} has been updated since last run."
-            )
-            cursor.execute(
-                """
-                INSERT INTO contacts (id, name, address1, address2, city, state, zip, 
-                        email, phone, mobile, latitude, longitude, customer_id,
-                        account_id, notes, created_at, updated_at, vendor_id, title, 
-                        opt_out, extension, processed_phone,
-                        processed_mobile, ticket_matching_emails)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON DUPLICATE KEY UPDATE
-                name = VALUES(name),
-                address1 = VALUES(address1),
-                address2 = VALUES(address2),
-                city = VALUES(city),
-                state = VALUES(state),
-                zip = VALUES(zip),
-                email = VALUES(email),
-                phone = VALUES(phone),
-                mobile = VALUES(mobile),
-                latitude = VALUES(latitude),
-                longitude = VALUES(longitude),
-                customer_id = VALUES(customer_id),
-                account_id = VALUES(account_id),
-                notes = VALUES(notes),
-                created_at = VALUES(created_at),
-                updated_at = VALUES(updated_at),
-                vendor_id = VALUES(vendor_id),
-                title = VALUES(title),
-                opt_out = VALUES(opt_out),
-                extension = VALUES(extension),
-                processed_phone = VALUES(processed_phone),
-                processed_mobile = VALUES(processed_mobile),
-                ticket_matching_emails = VALUES(ticket_matching_emails)
-                """,
-                (
-                    contact["id"],
-                    contact["name"],
-                    contact["address1"],
-                    contact["address2"],
-                    contact["city"],
-                    contact["state"],
-                    contact["zip"],
-                    contact["email"],
-                    contact["phone"],
-                    contact["mobile"],
-                    contact["latitude"],
-                    contact["longitude"],
-                    contact["customer_id"],
-                    contact["account_id"],
-                    contact["notes"],
-                    formatted_created_at,
-                    formatted_updated_at,
-                    contact["vendor_id"],
-                    contact["properties"]["title"]
-                    if "title" in contact["properties"]
-                    else None,
-                    contact["opt_out"],
-                    contact["extension"],
-                    contact["processed_phone"],
-                    contact["processed_mobile"],
-                    contact["ticket_matching_emails"],
-                ),
-            )
-            CONNECTION.commit()
-            ENTRY_COUNT += 1
-            print(f"{log_ts()} All data received from {TOTAL_PAGES} page(s)")
-    QUERY = "SELECT COUNT(*) FROM contacts"
-    cursor.execute(QUERY)
-    result = cursor.fetchone()
-    if result is not None:
-        DB_ROWS = result[0]
-
-    # Check if the total entries match the expected count
-    if ENTRY_COUNT != TOTAL_ENTRIES:
-        print(
-            f"{log_ts()} "
-            f"Warning: Made changes to {ENTRY_COUNT} entries but found, "
-            f"Meta Rows: {TOTAL_ENTRIES}."
-        )
-        print(f"{log_ts()} Row Count from DB is: {DB_ROWS}")
-
-    print(f"{log_ts()} Contacts successfully inserted into the database.")
-    print(f"{log_ts()} Made: {TOTAL_ENTRIES} updates")
-
-except mysql.connector.Error as err:
-    print(f"{log_ts()} Database error {err}")
-finally:
-    if CONNECTION and CONNECTION.is_connected():
-        CONNECTION.close()
-        update_last_ran(TIMESTAMP_FILE)
-
+CONNECTION.commit()
+CONNECTION.close()
+update_last_ran(TIMESTAMP_FILE)
 print(f"{log_ts()} Database connection closed.")

@@ -26,8 +26,8 @@ def check_last_ran(timestamp_file):
                 print(f"{log_ts()} Last ran @ {last_run_time_str}")
                 return int(last_run_timestamp_str)
             else:
-                print(f"{log_ts()} no timestamp found, using 0 as time")
+                print(f"{log_ts()} No timestamp found, using 0 as time, assuming rebuild")
                 return int(0)
     except FileNotFoundError:
-        print(f"{log_ts()} no timestamp file found, using 0 as time, assuming rebuild")
+        print(f"{log_ts()} No timestamp file found, using 0 as time, assuming rebuild")
         return 0

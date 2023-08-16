@@ -333,6 +333,119 @@ def insert_tickets(cursor, items, last_run_timestamp_unix):
 
     print(f"Added {added} new tickets, updated {updated} existing tickets.")
 
+def insert_contacts(cursor, items, last_run_timestamp_unix):
+    """Insert of update contacts based on the items provided."""
+    added = 0
+    updated = 0
+    for item in items:
+        # Check if the record exists and get the current updated_at value
+        cursor.execute("SELECT updated_at FROM contacts WHERE id = %s", (item["id"],))
+        existing_record = cursor.fetchone()
+        if existing_record:
+            if rs_to_unix_timestamp(item['updated_at']) > last_run_timestamp_unix:
+                print(
+                    f"{log_ts()} Contact {item['name']} has been updated since last run."
+                )
+                updated += 1
+                sql="""
+                    UPDATE contacts SET 
+                        id = %s, 
+                        name = %s, 
+                        address1 = %s, 
+                        address2 = %s, 
+                        city = %s, 
+                        state = %s, 
+                        zip = %s, 
+                        email = %s, 
+                        phone = %s, 
+                        mobile = %s, 
+                        latitude = %s, 
+                        longitude = %s, 
+                        customer_id = %s,
+                        account_id = %s, 
+                        notes = %s, 
+                        created_at = %s, 
+                        updated_at = %s, 
+                        vendor_id = %s, 
+                        title = %s, 
+                        opt_out = %s, 
+                        extension = %s, 
+                        processed_phone = %s,
+                        processed_mobile = %s, 
+                        ticket_matching_emails = %s
+                    WHERE id = %s
+                    """
+                values = (                
+                        item["id"],
+                        item["name"],
+                        item["address1"],
+                        item["address2"],
+                        item["city"],
+                        item["state"],
+                        item["zip"],
+                        item["email"],
+                        item["phone"],
+                        item["mobile"],
+                        item["latitude"],
+                        item["longitude"],
+                        item["customer_id"],
+                        item["account_id"],
+                        item["notes"],
+                        format_date_fordb(item["created_at"]),
+                        format_date_fordb(item["updated_at"]),
+                        item["vendor_id"],
+                        item["properties"]["title"]
+                        if "title" in item["properties"]
+                        else None,
+                        item["opt_out"],
+                        item["extension"],
+                        item["processed_phone"],
+                        item["processed_mobile"],
+                        item["ticket_matching_emails"],
+                    )
+                cursor.execute(sql, values)
+                print(f"{log_ts()} All data received from {(items.len)/4} page(s)")
+        else:
+            added += 1
+            sql = """
+                INSERT INTO contacts (
+                    id, name, address1, address2, city, state, zip, email, phone, mobile, latitude, longitude, customer_id,
+                    account_id, notes, created_at, updated_at, vendor_id, title, opt_out, extension, processed_phone,
+                    processed_mobile, ticket_matching_emails
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            values = (
+                item["id"],
+                item["name"],
+                item["address1"],
+                item["address2"],
+                item["city"],
+                item["state"],
+                item["zip"],
+                item["email"],
+                item["phone"],
+                item["mobile"],
+                item["latitude"],
+                item["longitude"],
+                item["customer_id"],
+                item["account_id"],
+                item["notes"],
+                format_date_fordb(item["created_at"]),
+                format_date_fordb(item["updated_at"]),
+                item["vendor_id"],
+                item["properties"]["title"]
+                if "title" in item["properties"]
+                else None,
+                item["opt_out"],
+                item["extension"],
+                item["processed_phone"],
+                item["processed_mobile"],
+                item["ticket_matching_emails"],
+            )
+            cursor.execute(sql, values)
+    print(f"{log_ts()} Added {added} new contacts, updated {updated} existing contacts.")
+
 
 def insert_comments(cursor, items, last_run_timestamp_unix):
     """Insert or update comments based on the items provided."""
