@@ -1,5 +1,8 @@
 """library for db connection functions"""
+from datetime import datetime
+import json
 import mysql.connector
+from library.fix_date_time_library import rs_to_unix_timestamp, format_date_fordb
 
 
 def create_contact_table_if_not_exists(config):
@@ -53,7 +56,7 @@ def create_invoice_items_table_if_not_exists(config):
             updated_at DATETIME,
             invoice_id INT,
             item VARCHAR(1024),
-            name VARCHAR(2048),
+            name VARCHAR(4096),
             cost DECIMAL(10, 2),
             price DECIMAL(10, 2),
             quantity DECIMAL(10, 2),
@@ -68,3 +71,424 @@ def create_invoice_items_table_if_not_exists(config):
         """
     )
     return cursor, connection
+
+
+def create_tickets_table_if_not_exists(cursor):
+    """Create the ticket table if it doesn't already exist."""
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS tickets (
+            id INT PRIMARY KEY,
+            number INT,
+            subject VARCHAR(255),
+            created_at DATETIME,
+            customer_id INT,
+            customer_business_then_name VARCHAR(255),
+            due_date DATETIME,
+            resolved_at DATETIME,
+            start_at DATETIME,
+            end_at DATETIME,
+            location_id INT,
+            problem_type VARCHAR(255),
+            status VARCHAR(255),
+            ticket_type_id INT,
+            properties TEXT,
+            user_id INT,
+            updated_at DATETIME,
+            pdf_url TEXT,
+            priority VARCHAR(255),
+            comments TEXT
+        )
+        """
+    )
+
+
+def create_comments_table_if_not_exists(cursor):
+    """create the comments table if it's not already made"""
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS comments (
+            id INT PRIMARY KEY,
+            created_at DATETIME,
+            updated_at DATETIME,
+            ticket_id INT,
+            subject VARCHAR(255),
+            body TEXT,
+            tech VARCHAR(255),
+            hidden BOOLEAN,
+            user_id INT,
+            FOREIGN KEY (ticket_id) REFERENCES tickets(id)
+        )
+        """
+    )
+
+
+def connect_to_db(config):
+    """connect to the db"""
+    connection = mysql.connector.connect(**config)
+    cursor = connection.cursor()
+    return cursor, connection
+
+
+def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
+    """insert invoice lines"""
+    added = 0
+    for item in items:
+        updated_at_str = item["updated_at"]
+        # print(updated_at_str)
+        updated_at_unix = datetime.strptime(updated_at_str, "%Y-%m-%d %H:%M:%S")
+        updated_at_unix = int(updated_at_unix.timestamp())
+        # print(updated_at_unix)
+
+        print(f"Processing item {item['id']}")  # Debugging print
+        print(
+            f"Item timestamp: {updated_at_unix}, Last run timestamp: {last_run_timestamp_unix}"
+        )  # Debugging print
+
+        # Check if the record exists and get the current updated_at value
+        cursor.execute(
+            "SELECT updated_at FROM invoice_items WHERE id = %s", (item["id"],)
+        )
+        existing_record = cursor.fetchone()
+
+        if existing_record:
+            existing_timestamp = int(existing_record[0].timestamp())
+            print(f"existing_timestamp: {existing_timestamp}")
+
+            if updated_at_unix > existing_timestamp:
+                # If record exists and updated_at is greater, update it
+                print(f"line item {item['id']} has been updated since last run.")
+                sql = """
+                    UPDATE invoice_items SET
+                        created_at = %s,
+                        updated_at = %s,
+                        invoice_id = %s,
+                        item = %s,
+                        name = %s,
+                        cost = %s,
+                        price = %s,
+                        quantity = %s,
+                        product_id = %s,
+                        taxable = %s,
+                        discount_percent = %s,
+                        position = %s,
+                        invoice_bundle_id = %s,
+                        discount_dollars = %s,
+                        product_category = %s
+                    WHERE id = %s
+                """
+                values = (
+                    item["id"],
+                    item["created_at"],
+                    item["updated_at"],
+                    item["invoice_id"],
+                    item["item"],
+                    item["name"],
+                    item["cost"],
+                    item["price"],
+                    item["quantity"],
+                    item["product_id"],
+                    item["taxable"],
+                    item["discount_percent"],
+                    item["position"],
+                    item["invoice_bundle_id"],
+                    item["discount_dollars"],
+                    item["product_category"],
+                )
+                cursor.execute(sql, values)
+        else:
+            # If record doesn't exist, insert it
+            added += 1
+            print(f"Inserting new line item {item['id']}.")
+            sql = """
+                INSERT INTO invoice_items (
+                    id, created_at, updated_at, invoice_id, item, name,
+                    cost, price, quantity, product_id, taxable, discount_percent,
+                    position, invoice_bundle_id, discount_dollars, product_category
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            values = (
+                item["id"],
+                item["created_at"],
+                item["updated_at"],
+                item["invoice_id"],
+                item["item"],
+                item["name"],
+                item["cost"],
+                item["price"],
+                item["quantity"],
+                item["product_id"],
+                item["taxable"],
+                item["discount_percent"],
+                item["position"],
+                item["invoice_bundle_id"],
+                item["discount_dollars"],
+                item["product_category"],
+            )
+            print(f"Inserting new line item with ID: {item['id']}.")
+            print("Values tuple:", values)
+            cursor.execute(sql, values)
+    print(f"Added {added} new line items.")
+
+
+def insert_tickets(cursor, items, last_run_timestamp_unix):
+    """Insert or update tickets based on the items provided."""
+    added = 0
+    updated = 0
+    for item in items:
+        # Check if the record exists and get the current updated_at value
+        cursor.execute("SELECT updated_at FROM tickets WHERE id = %s", (item["id"],))
+        existing_record = cursor.fetchone()
+        print(f"processing ticket {item['id']}")
+        if existing_record:
+            if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
+                # If record exists and updated_at is greater, update it
+                print(last_run_timestamp_unix)
+                updated += 1
+                sql = """
+                    UPDATE tickets SET
+                        number = %s,
+                        subject = %s,
+                        created_at = %s,
+                        customer_id = %s,
+                        customer_business_then_name = %s,
+                        due_date = %s,
+                        resolved_at = %s,
+                        start_at = %s,
+                        end_at = %s,
+                        location_id = %s,
+                        problem_type = %s,
+                        status = %s,
+                        ticket_type_id = %s,
+                        properties = %s,
+                        user_id = %s,
+                        updated_at = %s,
+                        pdf_url = %s,
+                        priority = %s,
+                        comments = %s
+                    WHERE id = %s
+                """
+                values = (
+                    item["number"],
+                    item["subject"],
+                    format_date_fordb(item["created_at"]),
+                    item["customer_id"],
+                    item["customer_business_then_name"],
+                    format_date_fordb(item["due_date"]),
+                    format_date_fordb(item["resolved_at"]),
+                    item["start_at"],
+                    item["end_at"],
+                    item["location_id"],
+                    item["problem_type"],
+                    item["status"],
+                    item["ticket_type_id"],
+                    json.dumps(item.get("properties", {})),
+                    item["user_id"],
+                    format_date_fordb(item["updated_at"]),
+                    item["pdf_url"],
+                    item["priority"],
+                    json.dumps(item.get("comments", {})),
+                    item["id"],
+                )
+                cursor.execute(sql, values)
+        else:
+            # If record doesn't exist, insert it
+            added += 1
+            sql = """
+                INSERT INTO tickets (
+                    id, number, subject, created_at, customer_id, 
+                    customer_business_then_name, due_date, resolved_at, start_at,
+                    end_at, location_id, problem_type, status, ticket_type_id,
+                    properties, user_id, updated_at, pdf_url, priority, comments
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            values = (
+                item["id"],
+                item["number"],
+                item["subject"],
+                format_date_fordb(item["created_at"]),
+                item["customer_id"],
+                item["customer_business_then_name"],
+                format_date_fordb(item["due_date"]),
+                format_date_fordb(item["resolved_at"]),
+                item["start_at"],
+                item["end_at"],
+                item["location_id"],
+                item["problem_type"],
+                item["status"],
+                item["ticket_type_id"],
+                json.dumps(item.get("properties", {})),
+                item["user_id"],
+                format_date_fordb(item["updated_at"]),
+                item["pdf_url"],
+                item["priority"],
+                json.dumps(item.get("comments", {})),
+            )
+            print(values)
+            cursor.execute(sql, values)
+
+    print(f"Added {added} new tickets, updated {updated} existing tickets.")
+
+
+def insert_comments(cursor, items, last_run_timestamp_unix):
+    """Insert or update comments based on the items provided."""
+    added = 0
+    updated = 0
+
+    for item in items:
+        ticket_id = item["id"]
+        comments_data = item.get("comments", "[]")
+
+        for comment in comments_data:
+            # Check if the comment exists and get the current updated_at value
+            cursor.execute(
+                "SELECT updated_at FROM comments WHERE id = %s", (comment["id"],)
+            )
+            existing_comment = cursor.fetchone()
+
+            if existing_comment:
+                if (
+                    rs_to_unix_timestamp(comment["updated_at"])
+                    > last_run_timestamp_unix
+                ):
+                    # If comment exists and updated_at is greater, update it
+                    updated += 1
+                    sql = """
+                        UPDATE comments SET
+                            created_at = %s,
+                            updated_at = %s,
+                            ticket_id = %s,
+                            subject = %s,
+                            body = %s,
+                            tech = %s,
+                            hidden = %s,
+                            user_id = %s
+                        WHERE id = %s
+                    """
+                    values = (
+                        format_date_fordb(comment["created_at"]),
+                        format_date_fordb(comment["updated_at"]),
+                        ticket_id,
+                        comment["subject"],
+                        comment["body"],
+                        comment["tech"],
+                        comment["hidden"],
+                        comment["user_id"],
+                        comment["id"],
+                    )
+                    cursor.execute(sql, values)
+            else:
+                # If comment doesn't exist, insert it
+                added += 1
+                sql = """
+                    INSERT INTO comments (
+                        id, created_at, updated_at, ticket_id, subject,
+                        body, tech, hidden, user_id
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
+                values = (
+                    comment["id"],
+                    format_date_fordb(comment["created_at"]),
+                    format_date_fordb(comment["updated_at"]),
+                    ticket_id,
+                    comment["subject"],
+                    comment["body"],
+                    comment["tech"],
+                    comment["hidden"],
+                    comment["user_id"],
+                )
+                cursor.execute(sql, values)
+
+    print(f"Added {added} new comments, updated {updated} existing comments.")
+
+
+def compare_id_sums(cursor, data):
+    """compare the id sums to make sure they match"""
+    cursor.execute("SELECT SUM(id) FROM contacts")
+    contacts_sum = cursor.fetchone()[0]
+
+    sum_of_ids_api = sum(contact["id"] for contact in data)
+    print(f"Sum of IDs from API: {sum_of_ids_api}")
+    print(f"Sum of IDs from DB: {contacts_sum}")
+
+    if sum_of_ids_api == contacts_sum:
+        print("The sum of IDs matches.")
+    else:
+        print("The sum of IDs does not match.")
+
+    return sum_of_ids_api == contacts_sum
+
+
+def move_deleted_contacts_to_deleted_table(cursor, connection, data):
+    """compare the id sums, and move any entries not
+    in the data array to the deleted_contacts table"""
+
+    # Get the sum of the IDs from the database
+    cursor.execute("SELECT SUM(id) FROM contacts")
+    contacts_sum = cursor.fetchone()[0]
+
+    # Get the sum of the IDs from the API data
+    sum_of_ids_api = sum(contact["id"] for contact in data)
+    print(f"Sum of IDs from API: {sum_of_ids_api}")
+    print(f"Sum of IDs from DB: {contacts_sum}")
+
+    if sum_of_ids_api != contacts_sum:
+        print("The sum of IDs does not match. Identifying deleted contacts...")
+
+        cursor.execute(
+            """CREATE TABLE IF NOT EXISTS deleted_contacts (
+        id INT PRIMARY KEY,
+        name VARCHAR(255),
+        address1 VARCHAR(255),
+        address2 VARCHAR(255),
+        city VARCHAR(255),
+        state VARCHAR(255),
+        zip VARCHAR(255),
+        email VARCHAR(255),
+        phone VARCHAR(255),
+        mobile VARCHAR(255),
+        latitude FLOAT,
+        longitude FLOAT,
+        customer_id INT,
+        account_id INT,
+        notes TEXT,
+        created_at DATETIME,
+        updated_at DATETIME,
+        vendor_id INT,
+        title VARCHAR(255),
+        opt_out BOOLEAN,
+        extension VARCHAR(50),
+        processed_phone VARCHAR(255),
+        processed_mobile VARCHAR(255),
+        ticket_matching_emails VARCHAR(255)
+    )
+    """
+        )
+
+        # Get the set of IDs from the API data
+        api_ids = {contact["id"] for contact in data}
+
+        # Query all IDs from the contacts table
+        cursor.execute("SELECT id FROM contacts")
+        db_ids = cursor.fetchall()
+
+        # Check for IDs that are in the DB but not in the API data
+        for (db_id,) in db_ids:
+            if db_id not in api_ids:
+                print(f"Moving contact with ID {db_id} to deleted_contacts table...")
+
+                # Copy the row to the deleted_contacts table
+                cursor.execute(
+                    """INSERT INTO deleted_contacts SELECT
+                                * FROM contacts WHERE id = %s""",
+                    (db_id,),
+                )
+
+                # Delete the row from the contacts table
+                cursor.execute("DELETE FROM contacts WHERE id = %s", (db_id,))
+
+                connection.commit()
+
+        print("Operation completed successfully.")
+    else:
+        print("The sum of IDs matches.")
