@@ -10,7 +10,7 @@ from library.fix_date_time_library import (
 
 def rate_limit():
     """current rate limit setting"""
-    return 24 / 128
+    return 30 / 128
 
 
 def create_contact_table_if_not_exists(cursor):
@@ -674,7 +674,7 @@ def move_deleted_lines_to_deleted_table(cursor, connection, data):
         for (db_id,) in db_ids:
             if db_id not in api_ids:
                 print(
-                    f"{log_ts()} Moving invoice item with ID {db_id}" 
+                    f"{log_ts()} Moving invoice item with ID {db_id}"
                     "to deleted_invoice_items table..."
                 )
 

@@ -2,7 +2,7 @@
 from datetime import datetime
 import time
 import library.env_library as env_library
-from library.fix_date_time_library import format_date_fordb, get_timestamp_code
+from library.fix_date_time_library import format_date_fordb, get_timestamp_code, log_ts
 from library.db_requests_library import (
     create_invoice_items_table_if_not_exists,
     insert_invoice_lines,
@@ -28,7 +28,6 @@ headers = {"Authorization": f"Bearer {env_library.api_key_invoice}"}
 TOTAL_PAGES = 0
 CURRENT_PAGE = 1
 TOTAL_ENTRIES = 0
-ENTRY_COUNT = 0
 DB_ROWS = 0
 ALL_DATA = []
 FOUND_LAST_UPDATED_ROW = False
@@ -40,10 +39,9 @@ if data is not None:
     TOTAL_ENTRIES = data["meta"]["total_entries"]
     CURRENT_PAGE = TOTAL_PAGES
 else:
-    print("Error getting invoice line item data")
+    print(f"{log_ts()} Error getting invoice line item data")
 
-print(f"Total pages: {TOTAL_PAGES}")
-print("Created invoice_items table")
+print(f"{log_ts()} Total pages: {TOTAL_PAGES}")
 
 # TOTAL_PAGES + 1
 for page in range(TOTAL_PAGES, 0, -1):
@@ -58,18 +56,18 @@ for page in range(TOTAL_PAGES, 0, -1):
             < last_run_timestamp_unix
         ):
             FOUND_LAST_UPDATED_ROW = True
-            print(f"Found last updated row in page {page}")
+            print(f"{log_ts()} Found last updated row in page {page}")
             break
 
         ALL_DATA.extend(data["line_items"])
-        print(f"{datetime.now()} : Added in page # {page}")
+        print(f"{log_ts()} Added in page # {page}")
     else:
-        print("Error getting line items data")
+        print(f"{log_ts()} Error getting line items data")
         break
     time.sleep(4 / 128)
 
 if not FOUND_LAST_UPDATED_ROW:
-    print("No updates since last run")
+    print(f"{log_ts()} No updates since last run")
 
 
 for line_items in ALL_DATA:
@@ -84,7 +82,7 @@ for line_items in ALL_DATA:
     formatted_updated_at = format_date_fordb(updated_at_str)
     line_items["updated_at"] = formatted_updated_at
 
-print(f"Number of entries to consider for DB: {len(ALL_DATA)}")
+print(f"{log_ts()} Number of entries to consider for DB: {len(ALL_DATA)}")
 insert_invoice_lines(cursor, ALL_DATA, last_run_timestamp_unix)
 CONNECTION.commit()
 CONNECTION.close()
