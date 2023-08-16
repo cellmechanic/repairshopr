@@ -7,3 +7,4 @@ last_run_invoice_lines_updates.txt
 last_run_invoice_lines.txt
 last_run_tickets_full.txt
 __pycache__/
+.vscode/
