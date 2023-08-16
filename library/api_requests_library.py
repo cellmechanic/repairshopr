@@ -43,6 +43,7 @@ def get_tickets(page):
             print(f"Error fetching invoice line items on page {page}: {response.text}")
             return None
         return response.json()
+
     except requests.RequestException as error:
         print(f"Failed to get data for page {page}: {str(error)}")
         return None

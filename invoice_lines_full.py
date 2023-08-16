@@ -61,8 +61,6 @@ if not deleted:
     print(f"{log_ts()} There is an id mismatch, we need to look for del")
     move_deleted_lines_to_deleted_table(cursor, CONNECTION, ALL_DATA)
 
-
-
 CONNECTION.commit()
 CONNECTION.close()
 update_last_ran(TIMESTAMP_FILE)
