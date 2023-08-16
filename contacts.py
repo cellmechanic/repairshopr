@@ -3,28 +3,25 @@
 from datetime import datetime
 import mysql.connector
 import library.env_library as env_library
-from library.fix_dates_library import format_date_fordb
+from library.fix_date_time_library import format_date_fordb, get_timestamp_code
 from library.api_requests_library import (
     get_contacts,
-    update_last_ran,
-    check_last_ran,
-    get_timestamp_code,
-    compare_id_sums,
-    move_deleted_contacts_to_deleted_table,
 )
 from library.db_requests_library import (
     create_contact_table_if_not_exists,
+    connect_to_db,
+    compare_id_sums,
+    move_deleted_contacts_to_deleted_table,
 )
+from library.timestamp_files import update_last_ran, check_last_ran
 
 # Load timestamp
-# test change
 TIMESTAMP_FILE = "last_run_contacts.txt"
 last_run_timestamp_unix = check_last_ran(TIMESTAMP_FILE)
 
 # Database configurations
-
 config = env_library.config
-CONNECTION = None
+cursor, CONNECTION = connect_to_db(config)
 
 # Connect to the database
 try:
