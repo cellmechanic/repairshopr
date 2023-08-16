@@ -26,4 +26,4 @@ def get_timestamp_code():
 
 def log_ts():
     """return a formatted string for a log with readable timestamp"""
-    return "[" + datetime.now().strftime("%Y-%m-%d %H:%M:%S%z") + "]"
+    return "[" + datetime.now().strftime("%H:%M:%S%z %m-%d-%Y") + "]"

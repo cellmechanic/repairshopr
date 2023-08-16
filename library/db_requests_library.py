@@ -1,5 +1,4 @@
 """library for db connection functions"""
-from datetime import datetime
 import json
 import mysql.connector
 from library.fix_date_time_library import (
@@ -11,7 +10,7 @@ from library.fix_date_time_library import (
 
 def rate_limit():
     """current rate limit setting"""
-    return 8 / 128
+    return 24 / 128
 
 
 def create_contact_table_if_not_exists(cursor):
@@ -137,18 +136,8 @@ def connect_to_db(config):
 def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
     """insert invoice lines"""
     added = 0
+    updated = 0
     for item in items:
-        updated_at_str = item["updated_at"]
-        # print(updated_at_str)
-        updated_at_unix = datetime.strptime(updated_at_str, "%Y-%m-%d %H:%M:%S")
-        updated_at_unix = int(updated_at_unix.timestamp())
-        # print(updated_at_unix)
-
-        print(f"Processing item {item['id']}")  # Debugging print
-        print(
-            f"Item timestamp: {updated_at_unix}, Last run timestamp: {last_run_timestamp_unix}"
-        )  # Debugging print
-
         # Check if the record exists and get the current updated_at value
         cursor.execute(
             "SELECT updated_at FROM invoice_items WHERE id = %s", (item["id"],)
@@ -156,12 +145,12 @@ def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
         existing_record = cursor.fetchone()
 
         if existing_record:
-            existing_timestamp = int(existing_record[0].timestamp())
-            print(f"existing_timestamp: {existing_timestamp}")
-
-            if updated_at_unix > existing_timestamp:
+            if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
                 # If record exists and updated_at is greater, update it
-                print(f"line item {item['id']} has been updated since last run.")
+                print(
+                    f"{log_ts()}line item {item['id']} has been updated since last run."
+                )
+                updated += 1
                 sql = """
                     UPDATE invoice_items SET
                         created_at = %s,
@@ -183,8 +172,8 @@ def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
                 """
                 values = (
                     item["id"],
-                    item["created_at"],
-                    item["updated_at"],
+                    format_date_fordb(item["created_at"]),
+                    format_date_fordb(item["updated_at"]),
                     item["invoice_id"],
                     item["item"],
                     item["name"],
@@ -213,8 +202,8 @@ def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
             """
             values = (
                 item["id"],
-                item["created_at"],
-                item["updated_at"],
+                format_date_fordb(item["created_at"]),
+                format_date_fordb(item["updated_at"]),
                 item["invoice_id"],
                 item["item"],
                 item["name"],
@@ -229,10 +218,10 @@ def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
                 item["discount_dollars"],
                 item["product_category"],
             )
-            print(f"Inserting new line item with ID: {item['id']}.")
-            print("Values tuple:", values)
+            print(f"{log_ts()} Inserting new line item with ID: {item['id']}.")
+            print(f"{log_ts()} Values tuple:", values)
             cursor.execute(sql, values)
-    print(f"Added {added} new line items.")
+    print(f"{log_ts()} Added {added} new line items, updated {updated} line items.")
 
 
 def insert_tickets(cursor, items, last_run_timestamp_unix):
@@ -328,7 +317,7 @@ def insert_tickets(cursor, items, last_run_timestamp_unix):
                 item["priority"],
                 json.dumps(item.get("comments", {})),
             )
-            print(values)
+            print(log_ts(), values)
             cursor.execute(sql, values)
 
     print(f"Added {added} new tickets, updated {updated} existing tickets.")
@@ -522,21 +511,38 @@ def insert_comments(cursor, items, last_run_timestamp_unix):
     print(f"Added {added} new comments, updated {updated} existing comments.")
 
 
-def compare_id_sums(cursor, data):
+def compare_id_sums(cursor, data, table_name):
     """compare the id sums to make sure they match"""
-    cursor.execute("SELECT SUM(id) FROM contacts")
-    contacts_sum = cursor.fetchone()[0]
+    if table_name == "contacts":
+        cursor.execute("SELECT SUM(id) FROM contacts")
+        contacts_sum = cursor.fetchone()[0]
 
-    sum_of_ids_api = sum(contact["id"] for contact in data)
-    print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
-    print(f"{log_ts()} Sum of IDs from DB: {contacts_sum}")
+        sum_of_ids_api = sum(contact["id"] for contact in data)
+        print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
+        print(f"{log_ts()} Sum of IDs from DB: {contacts_sum}")
 
-    if sum_of_ids_api == contacts_sum:
-        print(f"{log_ts()} Both ID sums are matching.")
-    else:
-        print(f"{log_ts()} The sum of IDs does not match.")
+        if sum_of_ids_api == contacts_sum:
+            print(f"{log_ts()} Both ID sums are matching.")
+        else:
+            print(f"{log_ts()} The sum of IDs does not match.")
 
-    return sum_of_ids_api == contacts_sum
+        return sum_of_ids_api == contacts_sum
+
+    if table_name == "invoice_items":
+        cursor.execute("SELECT SUM(id) FROM invoice_items")
+        line_items_sum = cursor.fetchone()[0]
+
+        sum_of_ids_api = sum(invoice_item["id"] for invoice_item in data)
+        print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
+        print(f"{log_ts()} Sum of IDs from DB: {line_items_sum}")
+
+        if sum_of_ids_api == line_items_sum:
+            print(f"{log_ts()} Both ID sums are matching.")
+        else:
+            print(f"{log_ts()} The sum of IDs does not match.")
+
+        print(log_ts(), sum_of_ids_api == line_items_sum)
+        return sum_of_ids_api == line_items_sum
 
 
 def move_deleted_contacts_to_deleted_table(cursor, connection, data):
@@ -549,11 +555,13 @@ def move_deleted_contacts_to_deleted_table(cursor, connection, data):
 
     # Get the sum of the IDs from the API data
     sum_of_ids_api = sum(contact["id"] for contact in data)
-    print(f"Sum of IDs from API: {sum_of_ids_api}")
-    print(f"Sum of IDs from DB: {contacts_sum}")
+    print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
+    print(f"{log_ts()} Sum of IDs from DB: {contacts_sum}")
 
     if sum_of_ids_api != contacts_sum:
-        print("The sum of IDs does not match. Identifying deleted contacts...")
+        print(
+            f"{log_ts()} The sum of IDs does not match. Identifying deleted contacts..."
+        )
 
         cursor.execute(
             """CREATE TABLE IF NOT EXISTS deleted_contacts (
@@ -595,7 +603,9 @@ def move_deleted_contacts_to_deleted_table(cursor, connection, data):
         # Check for IDs that are in the DB but not in the API data
         for (db_id,) in db_ids:
             if db_id not in api_ids:
-                print(f"Moving contact with ID {db_id} to deleted_contacts table...")
+                print(
+                    f"{log_ts()} Moving contact with ID {db_id} to deleted_contacts table..."
+                )
 
                 # Copy the row to the deleted_contacts table
                 cursor.execute(
@@ -612,3 +622,74 @@ def move_deleted_contacts_to_deleted_table(cursor, connection, data):
         print("Operation completed successfully.")
     else:
         print("The sum of IDs matches.")
+
+
+def move_deleted_lines_to_deleted_table(cursor, connection, data):
+    """Compare the id sums, and move any entries not
+    in the data array to the deleted_invoice_items table"""
+
+    # Get the sum of the IDs from the database
+    cursor.execute("SELECT SUM(id) FROM invoice_items")
+    line_items_sum = cursor.fetchone()[0]
+
+    # Get the sum of the IDs from the API data
+    sum_of_ids_api = sum(invoice_item["id"] for invoice_item in data)
+    print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
+    print(f"{log_ts()} Sum of IDs from DB: {line_items_sum}")
+
+    if sum_of_ids_api != line_items_sum:
+        print(
+            f"{log_ts()} The sum of IDs does not match. Identifying deleted invoice items..."
+        )
+        cursor.execute(
+            """CREATE TABLE IF NOT EXISTS deleted_invoice_items (
+                id INT PRIMARY KEY,
+            created_at DATETIME,
+            updated_at DATETIME,
+            invoice_id INT,
+            item VARCHAR(1024),
+            name VARCHAR(4096),
+            cost DECIMAL(10, 2),
+            price DECIMAL(10, 2),
+            quantity DECIMAL(10, 2),
+            product_id INT,
+            taxable BOOLEAN,
+            discount_percent DECIMAL(5, 2),
+            position INT,
+            invoice_bundle_id INT,
+            discount_dollars DECIMAL(10, 2),
+            product_category VARCHAR(255)
+        )
+        """
+        )
+
+        # Get the set of IDs from the API data
+        api_ids = {invoice_item["id"] for invoice_item in data}
+
+        # Query all IDs from the invoice_items table
+        cursor.execute("SELECT id FROM invoice_items")
+        db_ids = cursor.fetchall()
+
+        # Check for IDs that are in the DB but not in the API data
+        for (db_id,) in db_ids:
+            if db_id not in api_ids:
+                print(
+                    f"{log_ts()} Moving invoice item with ID {db_id}" 
+                    "to deleted_invoice_items table..."
+                )
+
+                # Copy the row to the deleted_invoice_items table
+                cursor.execute(
+                    """INSERT INTO deleted_invoice_items SELECT
+                                * FROM invoice_items WHERE id = %s""",
+                    (db_id,),
+                )
+
+                # Delete the row from the invoice_items table
+                cursor.execute("DELETE FROM invoice_items WHERE id = %s", (db_id,))
+
+                connection.commit()
+
+        print(f"{log_ts()} Operation completed successfully.")
+    else:
+        print(f"{log_ts()} The sum of IDs matches.")

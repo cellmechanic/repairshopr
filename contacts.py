@@ -60,8 +60,7 @@ print(f"{log_ts()} Recieved all data, {TOTAL_PAGES} page(s)")
 print(f"{log_ts()} Total rows in ALL_DATA: {len(ALL_DATA)}")
 
 # Check ID sums to see if anything was deleted
-DELETED = False
-deleted = compare_id_sums(cursor, ALL_DATA)
+deleted = compare_id_sums(cursor, ALL_DATA, "contacts")
 if not deleted:
     move_deleted_contacts_to_deleted_table(cursor, CONNECTION, ALL_DATA)
 
