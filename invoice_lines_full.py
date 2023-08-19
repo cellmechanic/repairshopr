@@ -58,7 +58,7 @@ insert_invoice_lines(cursor, ALL_DATA, last_run_timestamp_unix)
 # Check ID sums to see if anything was deleted
 deleted = compare_id_sums(cursor, ALL_DATA, "invoice_items")
 if not deleted:
-    print(f"{log_ts()} There is an id mismatch, we need to look for del")
+    print(f"{log_ts()} There is an id mismatch, we need to look for deletes")
     move_deleted_lines_to_deleted_table(cursor, CONNECTION, ALL_DATA)
 
 CONNECTION.commit()

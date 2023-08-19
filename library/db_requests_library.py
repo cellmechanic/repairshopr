@@ -148,7 +148,7 @@ def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
             if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
                 # If record exists and updated_at is greater, update it
                 print(
-                    f"{log_ts()}line item {item['id']} has been updated since last run."
+                    f"{log_ts()} Line item {item['id']} has been updated since last run."
                 )
                 updated += 1
                 sql = """
@@ -192,7 +192,7 @@ def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
         else:
             # If record doesn't exist, insert it
             added += 1
-            print(f"Inserting new line item {item['id']}.")
+            print(f"{log_ts()} Inserting new line item {item['id']}.")
             sql = """
                 INSERT INTO invoice_items (
                     id, created_at, updated_at, invoice_id, item, name,
@@ -232,11 +232,10 @@ def insert_tickets(cursor, items, last_run_timestamp_unix):
         # Check if the record exists and get the current updated_at value
         cursor.execute("SELECT updated_at FROM tickets WHERE id = %s", (item["id"],))
         existing_record = cursor.fetchone()
-        print(f"processing ticket {item['id']}")
+        print(f"{log_ts()} Processing ticket {item['number']}")
         if existing_record:
             if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
                 # If record exists and updated_at is greater, update it
-                print(last_run_timestamp_unix)
                 updated += 1
                 sql = """
                     UPDATE tickets SET
@@ -320,7 +319,7 @@ def insert_tickets(cursor, items, last_run_timestamp_unix):
             print(log_ts(), values)
             cursor.execute(sql, values)
 
-    print(f"Added {added} new tickets, updated {updated} existing tickets.")
+    print(f"{log_ts()} Added {added} new tickets, updated {updated} existing tickets.")
 
 
 def insert_contacts(cursor, items, last_run_timestamp_unix):
@@ -543,6 +542,22 @@ def compare_id_sums(cursor, data, table_name):
 
         print(log_ts(), sum_of_ids_api == line_items_sum)
         return sum_of_ids_api == line_items_sum
+    
+    if table_name == "tickets":
+        cursor.execute("SELECT SUM(id) FROM tickets")
+        tickets_sum = cursor.fetchone()[0]
+
+        sum_of_ids_api = sum(ticket["id"] for ticket in data)
+        print(f"{log_ts()} Sum of IDs from tickets API: {sum_of_ids_api}")
+        print(f"{log_ts()} Sum of IDs from tickets DB: {tickets_sum}")
+
+        if sum_of_ids_api == tickets_sum:
+            print(f"{log_ts()} Both ID sums are matching.")
+        else:
+            print(f"{log_ts()} The sum of IDs does not match.")
+
+        print(log_ts(), sum_of_ids_api == tickets_sum)
+        return sum_of_ids_api == tickets_sum
 
 
 def move_deleted_contacts_to_deleted_table(cursor, connection, data):
@@ -559,6 +574,7 @@ def move_deleted_contacts_to_deleted_table(cursor, connection, data):
     print(f"{log_ts()} Sum of IDs from DB: {contacts_sum}")
 
     if sum_of_ids_api != contacts_sum:
+        deleted = 0
         print(
             f"{log_ts()} The sum of IDs does not match. Identifying deleted contacts..."
         )
@@ -616,12 +632,14 @@ def move_deleted_contacts_to_deleted_table(cursor, connection, data):
 
                 # Delete the row from the contacts table
                 cursor.execute("DELETE FROM contacts WHERE id = %s", (db_id,))
+                deleted += 1
 
                 connection.commit()
 
-        print("Operation completed successfully.")
+        print(f"{log_ts()} Operation completed successfully.")
+        print(f"{log_ts()} Deleted {deleted} contacts.")
     else:
-        print("The sum of IDs matches.")
+        print(f"{log_ts()} The sum of IDs matches.")
 
 
 def move_deleted_lines_to_deleted_table(cursor, connection, data):
@@ -638,6 +656,7 @@ def move_deleted_lines_to_deleted_table(cursor, connection, data):
     print(f"{log_ts()} Sum of IDs from DB: {line_items_sum}")
 
     if sum_of_ids_api != line_items_sum:
+        deleted = 0
         print(
             f"{log_ts()} The sum of IDs does not match. Identifying deleted invoice items..."
         )
@@ -687,9 +706,163 @@ def move_deleted_lines_to_deleted_table(cursor, connection, data):
 
                 # Delete the row from the invoice_items table
                 cursor.execute("DELETE FROM invoice_items WHERE id = %s", (db_id,))
-
+                deleted += 1
                 connection.commit()
 
         print(f"{log_ts()} Operation completed successfully.")
+        print(f"{log_ts()} Deleted {deleted} invoice items.")
+    else:
+        print(f"{log_ts()} The sum of IDs matches.")
+
+
+def move_deleted_tickets_to_deleted_table(cursor, connection, data):
+    """Compare the id sums, and move any entries not
+    in the data array to the deleted_tickets table"""
+
+    # Get the sum of the IDs from the database
+    cursor.execute("SELECT SUM(id) FROM tickets")
+    tickets_sum = cursor.fetchone()[0]
+
+    # Get the sum of the IDs from the API data
+    sum_of_ids_api = sum(ticket["id"] for ticket in data)
+    print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
+    print(f"{log_ts()} Sum of IDs from DB: {tickets_sum}")
+
+    if sum_of_ids_api != tickets_sum:
+        deleted = 0
+        print(
+            f"{log_ts()} The sum of IDs does not match. Identifying deleted tickets..."
+        )
+        cursor.execute(
+            """CREATE TABLE IF NOT EXISTS deleted_tickets (
+                id INT PRIMARY KEY,
+            number INT,
+            subject VARCHAR(255),
+            created_at DATETIME,
+            customer_id INT,
+            customer_business_then_name VARCHAR(255),
+            due_date DATETIME,
+            resolved_at DATETIME,
+            start_at DATETIME,
+            end_at DATETIME,
+            location_id INT,
+            problem_type VARCHAR(255),
+            status VARCHAR(255),
+            ticket_type_id INT,
+            properties TEXT,
+            user_id INT,
+            updated_at DATETIME,
+            pdf_url TEXT,
+            priority VARCHAR(255),
+            comments TEXT
+        )
+        """
+        )
+
+        # Get the set of IDs from the API data
+        api_ids = {ticket["id"] for ticket in data}
+
+        # Query all IDs from the tickets table
+        cursor.execute("SELECT id FROM tickets")
+        db_ids = cursor.fetchall()
+
+        # Check for IDs that are in the DB but not in the API data
+        for (db_id,) in db_ids:
+            if db_id not in api_ids:
+                print(
+                    f"{log_ts()} Moving ticket with ID {db_id}"
+                    "to deleted_tickets table..."
+                )
+
+                # Copy the row to the deleted_tickets table
+                cursor.execute(
+                    """INSERT INTO deleted_tickets SELECT
+                                * FROM tickets WHERE id = %s""",
+                    (db_id,),
+                )
+
+                # Delete the row from the tickets table
+                cursor.execute("DELETE FROM tickets WHERE id = %s", (db_id,))
+                deleted += 1
+                connection.commit()
+
+        print(f"{log_ts()} Operation completed successfully.")
+        print(f"{log_ts()} {deleted} tickets were deleted.")
+    else:
+        print(f"{log_ts()} The sum of IDs matches.")
+
+
+def move_deleted_comments_to_deleted_table(cursor, connection, data):
+    """Compare the id sums, and move any entries not
+    in the data array to the deleted_comments table"""
+
+    # Get the sum of the IDs from the database
+    cursor.execute("SELECT SUM(id) FROM comments")
+    comments_sum = cursor.fetchone()[0]
+
+    # Get the sum of the IDs from the API data
+    sum_of_ids_api = sum(comment["id"] for comment in data)
+    print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
+    print(f"{log_ts()} Sum of IDs from DB: {comments_sum}")
+
+    if sum_of_ids_api != comments_sum:
+        deleted = 0
+        print(
+            f"{log_ts()} The sum of IDs does not match. Identifying deleted comments..."
+        )
+        cursor.execute(
+            """CREATE TABLE IF NOT EXISTS deleted_comments (
+            id INT PRIMARY KEY,
+            created_at DATETIME,
+            updated_at DATETIME,
+            ticket_id INT,
+            subject VARCHAR(255),
+            body TEXT,
+            tech VARCHAR(255),
+            hidden BOOLEAN,
+            user_id INT,
+            FOREIGN KEY (ticket_id) REFERENCES tickets(id)
+        )
+        """
+        )
+
+        all_comments = []
+        for item in data:
+            ticket_id = item["id"]
+            comments_data = item.get("comments", [])
+            for comment in comments_data:
+                comment["ticket_id"] = ticket_id  # Attach ticket_id to each comment for later use
+            all_comments.extend(comments_data)
+
+
+        # Get the set of IDs from the API data
+        api_ids = {comment["id"] for comment in all_comments}
+
+        # Query all IDs from the comments table
+        cursor.execute("SELECT id FROM comments")
+        db_ids = cursor.fetchall()
+
+        # Check for IDs that are in the DB but not in the API data
+        for (db_id,) in db_ids:
+            if db_id not in api_ids:
+                print(
+                    f"{log_ts()} Moving comment with ID {db_id}"
+                    " to deleted_comments table..."
+                )
+
+                # Copy the row to the deleted_comments table
+                cursor.execute(
+                    """INSERT INTO deleted_comments SELECT
+                                * FROM comments WHERE id = %s""",
+                    (db_id,),
+                )
+
+                # Delete the row from the comments table
+                cursor.execute("DELETE FROM comments WHERE id = %s", (db_id,))
+                deleted += 1
+                connection.commit()
+
+        print(f"{log_ts()} Operation completed successfully.")
+        print(f"{log_ts()} {deleted} comments were deleted.")
     else:
         print(f"{log_ts()} The sum of IDs matches.")

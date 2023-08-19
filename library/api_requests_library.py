@@ -1,6 +1,7 @@
 """api requests"""
 import requests
 from library import env_library
+from library.fix_date_time_library import log_ts
 
 
 def get_contacts(page):
@@ -10,11 +11,11 @@ def get_contacts(page):
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code != 200:
-            print(f"Error fetching contacts on page {page}: {response.text}")
+            print(f"{log_ts()} Error fetching contacts on page {page}: {response.text}")
             return None
         return response.json()
     except requests.RequestException as error:
-        print(f"Failed to get data for page {page}: {str(error)}")
+        print(f"{log_ts()} Failed to get data for page {page}: {str(error)}")
         return None
 
 
@@ -25,11 +26,11 @@ def get_invoice_lines(page):
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code != 200:
-            print(f"Error fetching invoice line items on page {page}: {response.text}")
+            print(f"{log_ts()} Error fetching invoice line items on page {page}: {response.text}")
             return None
         return response.json()
     except requests.RequestException as error:
-        print(f"Failed to get data for page {page}: {str(error)}")
+        print(f"{log_ts()} Failed to get data for page {page}: {str(error)}")
         return None
 
 
@@ -40,10 +41,10 @@ def get_tickets(page):
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code != 200:
-            print(f"Error fetching invoice line items on page {page}: {response.text}")
+            print(f"{log_ts()} Error fetching invoice line items on page {page}: {response.text}")
             return None
         return response.json()
 
     except requests.RequestException as error:
-        print(f"Failed to get data for page {page}: {str(error)}")
+        print(f"{log_ts()} Failed to get data for page {page}: {str(error)}")
         return None

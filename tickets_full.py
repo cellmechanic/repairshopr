@@ -1,5 +1,4 @@
 """get all tickets from the beginning"""
-from datetime import datetime
 import time
 import library.env_library as env_library
 from library.db_requests_library import (
@@ -8,6 +7,11 @@ from library.db_requests_library import (
     connect_to_db,
     insert_tickets,
     insert_comments,
+    log_ts,
+    compare_id_sums,
+    move_deleted_tickets_to_deleted_table,
+    move_deleted_comments_to_deleted_table,
+    rate_limit,
 )
 from library.api_requests_library import get_tickets
 from library.timestamp_files import (
@@ -31,7 +35,6 @@ headers = {"Authorization": f"Bearer {env_library.api_key_tickets}"}
 # Meta vars
 CURRENT_PAGE = 1
 TOTAL_PAGES = 0
-ENTRY_COUNT = 0
 DB_ROWS = 0
 ALL_DATA = []
 
@@ -40,23 +43,40 @@ data = get_tickets(CURRENT_PAGE)
 if data is not None:
     TOTAL_PAGES = data["meta"]["total_pages"]
 else:
-    print("Error getting invoice line item data")
+    print(f"{log_ts()} Error getting invoice line item data")
+
+print(f"{log_ts()} Total pages: {TOTAL_PAGES}")
 
 # TOTAL_PAGES + 1
-for page in range(1, TOTAL_PAGES + 1):
+for page in range(1, 4):
     data = get_tickets(page)
     if data is not None:
         ALL_DATA.extend(data["tickets"])
-        print(f"{datetime.now()} : Added in page # {page}")
+        print(f"{log_ts()} Added in page # {page}")
     else:
-        print("Error getting tickets data")
+        print(f"{log_ts()} Error getting tickets data")
         break
-    time.sleep(8 / 128)
+    time.sleep(rate_limit())
 
-print(f"Total pages: {TOTAL_PAGES}")
-print(f"Number of entries to consider for DB: {len(ALL_DATA)}")
+print(f"{log_ts()} Total pages: {TOTAL_PAGES}")
+print(f"{log_ts()} Number of entries to consider for DB: {len(ALL_DATA)}")
 insert_tickets(cursor, ALL_DATA, last_run_timestamp_unix)
 insert_comments(cursor, ALL_DATA, last_run_timestamp_unix)
+
+# Check ID sums to see if anything was delete
+deleted = compare_id_sums(cursor, ALL_DATA, "tickets")
+print(deleted)
+print(f"{log_ts()} Deleted: {deleted}")
+if not deleted:
+    print(f"{log_ts()} There is an id mismatch, we need to look for deletes")
+    move_deleted_tickets_to_deleted_table(cursor, CONNECTION, ALL_DATA)
+
+deleted = compare_id_sums(cursor, ALL_DATA, "comments")
+print(f"{log_ts()} Deleted: {deleted}")
+if not deleted:
+    print(f"{log_ts()} There is an id mismatch, we need to look for deletes")
+    move_deleted_comments_to_deleted_table(cursor, CONNECTION, ALL_DATA)
+
 CONNECTION.commit()
 CONNECTION.close()
 update_last_ran(TIMESTAMP_FILE)

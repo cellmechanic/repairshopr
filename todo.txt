@@ -1,0 +1,5 @@
+add in move to deleted table for the tickets / comments
+move tickets full to production
+put tickets full in cron
+make ticketse update
+put tickets update in cron
