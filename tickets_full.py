@@ -48,7 +48,7 @@ else:
 print(f"{log_ts()} Total pages: {TOTAL_PAGES}")
 
 # TOTAL_PAGES + 1
-for page in range(1, 4):
+for page in range(1, TOTAL_PAGES + 1):
     data = get_tickets(page)
     if data is not None:
         ALL_DATA.extend(data["tickets"])
