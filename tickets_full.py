@@ -61,21 +61,25 @@ for page in range(1, 4):
 print(f"{log_ts()} Total pages: {TOTAL_PAGES}")
 print(f"{log_ts()} Number of entries to consider for DB: {len(ALL_DATA)}")
 insert_tickets(cursor, ALL_DATA, last_run_timestamp_unix)
-insert_comments(cursor, ALL_DATA, last_run_timestamp_unix)
+comments_data = insert_comments(cursor, ALL_DATA, last_run_timestamp_unix)
 
-# Check ID sums to see if anything was delete
-deleted = compare_id_sums(cursor, ALL_DATA, "tickets")
-print(deleted)
-print(f"{log_ts()} Deleted: {deleted}")
-if not deleted:
-    print(f"{log_ts()} There is an id mismatch, we need to look for deletes")
-    move_deleted_tickets_to_deleted_table(cursor, CONNECTION, ALL_DATA)
-
-deleted = compare_id_sums(cursor, ALL_DATA, "comments")
-print(f"{log_ts()} Deleted: {deleted}")
+# Check ID sums to see if any comment was deleted
+deleted = compare_id_sums(cursor, comments_data, "comments")
+sum_of_ids_api = sum(comment["id"] for comment in comments_data)
 if not deleted:
     print(f"{log_ts()} There is an id mismatch, we need to look for deletes")
     move_deleted_comments_to_deleted_table(cursor, CONNECTION, ALL_DATA)
+else:
+    print(f"{log_ts()} No deletes found in comments, moving on...")
+
+# Check ID sums to see if any ticket was deleted
+deleted = compare_id_sums(cursor, ALL_DATA, "tickets")
+if not deleted:
+    print(f"{log_ts()} There is an id mismatch, we need to look for deletes")
+    move_deleted_tickets_to_deleted_table(cursor, CONNECTION, ALL_DATA)
+else:
+    print(f"{log_ts()} No deletes found in tickets, moving on...")
+
 
 CONNECTION.commit()
 CONNECTION.close()

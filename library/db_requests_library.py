@@ -440,62 +440,39 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
 
 def insert_comments(cursor, items, last_run_timestamp_unix):
     """Insert or update comments based on the items provided."""
+
     added = 0
     updated = 0
+    comments_data = []
 
     for item in items:
-        ticket_id = item["id"]
-        comments_data = item.get("comments", "[]")
+        comments_data.extend(item.get("comments", "[]"))
 
-        for comment in comments_data:
-            # Check if the comment exists and get the current updated_at value
-            cursor.execute(
-                "SELECT updated_at FROM comments WHERE id = %s", (comment["id"],)
-            )
-            existing_comment = cursor.fetchone()
+    for comment in comments_data:
+        # Check if the comment exists and get the current updated_at value
+        cursor.execute(
+            "SELECT updated_at FROM comments WHERE id = %s", (comment["id"],)
+        )
+        existing_comment = cursor.fetchone()
+        ticket_id = comment["ticket_id"]
 
-            if existing_comment:
-                if (
-                    rs_to_unix_timestamp(comment["updated_at"])
-                    > last_run_timestamp_unix
-                ):
-                    # If comment exists and updated_at is greater, update it
-                    updated += 1
-                    sql = """
-                        UPDATE comments SET
-                            created_at = %s,
-                            updated_at = %s,
-                            ticket_id = %s,
-                            subject = %s,
-                            body = %s,
-                            tech = %s,
-                            hidden = %s,
-                            user_id = %s
-                        WHERE id = %s
-                    """
-                    values = (
-                        format_date_fordb(comment["created_at"]),
-                        format_date_fordb(comment["updated_at"]),
-                        ticket_id,
-                        comment["subject"],
-                        comment["body"],
-                        comment["tech"],
-                        comment["hidden"],
-                        comment["user_id"],
-                        comment["id"],
-                    )
-                    cursor.execute(sql, values)
-            else:
-                # If comment doesn't exist, insert it
-                added += 1
+        if existing_comment:
+            if rs_to_unix_timestamp(comment["updated_at"]) > last_run_timestamp_unix:
+                # If comment exists and updated_at is greater, update it
+                updated += 1
                 sql = """
-                    INSERT INTO comments (
-                        id, created_at, updated_at, ticket_id, subject,
-                        body, tech, hidden, user_id
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    UPDATE comments SET
+                        created_at = %s,
+                        updated_at = %s,
+                        ticket_id = %s,
+                        subject = %s,
+                        body = %s,
+                        tech = %s,
+                        hidden = %s,
+                        user_id = %s
+                    WHERE id = %s
                 """
                 values = (
-                    comment["id"],
                     format_date_fordb(comment["created_at"]),
                     format_date_fordb(comment["updated_at"]),
                     ticket_id,
@@ -504,10 +481,35 @@ def insert_comments(cursor, items, last_run_timestamp_unix):
                     comment["tech"],
                     comment["hidden"],
                     comment["user_id"],
+                    comment["id"],
                 )
                 cursor.execute(sql, values)
+        else:
+            # If comment doesn't exist, insert it
+            added += 1
+            sql = """
+                INSERT INTO comments (
+                    id, created_at, updated_at, ticket_id, subject,
+                    body, tech, hidden, user_id
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            values = (
+                comment["id"],
+                format_date_fordb(comment["created_at"]),
+                format_date_fordb(comment["updated_at"]),
+                ticket_id,
+                comment["subject"],
+                comment["body"],
+                comment["tech"],
+                comment["hidden"],
+                comment["user_id"],
+            )
+            cursor.execute(sql, values)
 
-    print(f"Added {added} new comments, updated {updated} existing comments.")
+    print(
+        f"{log_ts()} Added {added} new comments, updated {updated} existing comments."
+    )
+    return comments_data
 
 
 def compare_id_sums(cursor, data, table_name):
@@ -542,7 +544,7 @@ def compare_id_sums(cursor, data, table_name):
 
         print(log_ts(), sum_of_ids_api == line_items_sum)
         return sum_of_ids_api == line_items_sum
-    
+
     if table_name == "tickets":
         cursor.execute("SELECT SUM(id) FROM tickets")
         tickets_sum = cursor.fetchone()[0]
@@ -552,12 +554,24 @@ def compare_id_sums(cursor, data, table_name):
         print(f"{log_ts()} Sum of IDs from tickets DB: {tickets_sum}")
 
         if sum_of_ids_api == tickets_sum:
-            print(f"{log_ts()} Both ID sums are matching.")
+            print(f"{log_ts()} Ticket ID's match.")
         else:
             print(f"{log_ts()} The sum of IDs does not match.")
-
-        print(log_ts(), sum_of_ids_api == tickets_sum)
         return sum_of_ids_api == tickets_sum
+
+    if table_name == "comments":
+        cursor.execute("SELECT SUM(id) FROM comments")
+        comments_sum = cursor.fetchone()[0]
+
+        sum_of_ids_api = sum(comment["id"] for comment in data)
+        print(f"{log_ts()} Sum of IDs from comments API: {sum_of_ids_api}")
+        print(f"{log_ts()} Sum of IDs from comments DB: {comments_sum}")
+
+        if sum_of_ids_api == comments_sum:
+            print(f"{log_ts()} Comment ID's match.")
+        else:
+            print(f"{log_ts()} The sum of IDs does not match.")
+        return sum_of_ids_api == comments_sum
 
 
 def move_deleted_contacts_to_deleted_table(cursor, connection, data):
@@ -771,10 +785,21 @@ def move_deleted_tickets_to_deleted_table(cursor, connection, data):
             if db_id not in api_ids:
                 print(
                     f"{log_ts()} Moving ticket with ID {db_id}"
-                    "to deleted_tickets table..."
+                    " and it's comments to deleted_tickets table,"
+                    " and it's comments to deleted_comments table..."
                 )
 
                 # Copy the row to the deleted_tickets table
+                # Assuming db_id is the ticket ID you're about to delete or move
+                cursor.execute(
+                    "INSERT INTO deleted_comments SELECT * FROM comments WHERE ticket_id = %s",
+                    (db_id,),
+                )
+                affected_rows = cursor.rowcount
+                print(f"Moved {affected_rows} comments to deleted_comments for ticket_id {db_id}.")
+
+                cursor.execute("DELETE FROM comments WHERE ticket_id = %s", (db_id,))
+
                 cursor.execute(
                     """INSERT INTO deleted_tickets SELECT
                                 * FROM tickets WHERE id = %s""",
@@ -820,8 +845,7 @@ def move_deleted_comments_to_deleted_table(cursor, connection, data):
             body TEXT,
             tech VARCHAR(255),
             hidden BOOLEAN,
-            user_id INT,
-            FOREIGN KEY (ticket_id) REFERENCES tickets(id)
+            user_id INT
         )
         """
         )
@@ -831,9 +855,10 @@ def move_deleted_comments_to_deleted_table(cursor, connection, data):
             ticket_id = item["id"]
             comments_data = item.get("comments", [])
             for comment in comments_data:
-                comment["ticket_id"] = ticket_id  # Attach ticket_id to each comment for later use
+                comment[
+                    "ticket_id"
+                ] = ticket_id  # Attach ticket_id to each comment for later use
             all_comments.extend(comments_data)
-
 
         # Get the set of IDs from the API data
         api_ids = {comment["id"] for comment in all_comments}
