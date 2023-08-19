@@ -232,7 +232,7 @@ def insert_tickets(cursor, items, last_run_timestamp_unix):
         # Check if the record exists and get the current updated_at value
         cursor.execute("SELECT updated_at FROM tickets WHERE id = %s", (item["id"],))
         existing_record = cursor.fetchone()
-        print(f"{log_ts()} Processing ticket {item['number']}")
+        # print(f"{log_ts()} Processing ticket {item['number']}")
         if existing_record:
             if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
                 # If record exists and updated_at is greater, update it
@@ -316,7 +316,8 @@ def insert_tickets(cursor, items, last_run_timestamp_unix):
                 item["priority"],
                 json.dumps(item.get("comments", {})),
             )
-            print(log_ts(), values)
+            # debug to print value tuples
+            # print(log_ts(), values)
             cursor.execute(sql, values)
 
     print(f"{log_ts()} Added {added} new tickets, updated {updated} existing tickets.")
