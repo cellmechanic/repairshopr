@@ -3,6 +3,6 @@ make tickets update - use a 60 day look back period, make a function to figure t
 put tickets update in cron
 remove a lot of the debug printouts so the logs don't become unreadable
 customers module
-customers module to produciton / cron
+customers module to production / cron
 estimates module
 estimates module to production / cron
