@@ -14,7 +14,7 @@ def rate_limit():
 
 
 def create_contact_table_if_not_exists(cursor):
-    """create the contact db if it desn't already exist"""
+    """create the contact db if it doesn't already exist"""
     cursor.execute(
         """CREATE TABLE IF NOT EXISTS contacts (
             id INT PRIMARY KEY,
@@ -41,6 +41,52 @@ def create_contact_table_if_not_exists(cursor):
             processed_phone VARCHAR(255),
             processed_mobile VARCHAR(255),
             ticket_matching_emails VARCHAR(255)
+        )
+        """
+    )
+
+
+def create_customer_table_if_not_exists(cursor):
+    """Create the customer db table if it doesn't already exist"""
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS customers (
+            id INT PRIMARY KEY,
+            firstname VARCHAR(255),
+            lastname VARCHAR(255),
+            fullname VARCHAR(255),
+            business_name VARCHAR(255),
+            email VARCHAR(255),
+            phone VARCHAR(255),
+            mobile VARCHAR(255),
+            created_at DATETIME,
+            updated_at DATETIME,
+            pdf_url TEXT,
+            address VARCHAR(255),
+            address_2 VARCHAR(255),
+            city VARCHAR(255),
+            state VARCHAR(255),
+            zip VARCHAR(255),
+            latitude FLOAT,
+            longitude FLOAT,
+            notes TEXT,
+            get_sms BOOLEAN,
+            opt_out BOOLEAN,
+            disabled BOOLEAN,
+            no_email BOOLEAN,
+            location_name VARCHAR(255),
+            location_id INT,
+            properties JSON,
+            online_profile_url TEXT,
+            tax_rate_id INT,
+            notification_email VARCHAR(255),
+            invoice_cc_emails VARCHAR(255),
+            invoice_term_id INT,
+            referred_by VARCHAR(255),
+            ref_customer_id INT,
+            business_and_full_name VARCHAR(255),
+            business_then_name VARCHAR(255),
+            contacts JSON
         )
         """
     )
@@ -401,8 +447,10 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
             added += 1
             sql = """
                 INSERT INTO contacts (
-                    id, name, address1, address2, city, state, zip, email, phone, mobile, latitude, longitude, customer_id,
-                    account_id, notes, created_at, updated_at, vendor_id, title, opt_out, extension, processed_phone,
+                    id, name, address1, address2, city, state, zip, 
+                    email, phone, mobile, latitude, longitude, customer_id,
+                    account_id, notes, created_at, updated_at, vendor_id, title, 
+                    opt_out, extension, processed_phone,
                     processed_mobile, ticket_matching_emails
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
                         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -437,6 +485,115 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
     print(
         f"{log_ts()} Added {added} new contacts, updated {updated} existing contacts."
     )
+
+
+def insert_customers(cursor, items, last_run_timestamp_unix):
+    """Insert or update customers based on the items provided."""
+    added = 0
+    updated = 0
+    for item in items:
+        # Check if the record exists and get the current updated_at value
+        cursor.execute("SELECT updated_at FROM customers WHERE id = %s", (item["id"],))
+        existing_record = cursor.fetchone()
+        if existing_record:
+            if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
+                print(f"{log_ts()} Customer {item['fullname']} has been updated since last run.")
+                updated += 1
+                sql = """
+                    UPDATE customers SET 
+                        firstname = %s,
+                        lastname = %s,
+                        fullname = %s,
+                        business_name = %s,
+                        email = %s,
+                        phone = %s,
+                        mobile = %s,
+                        created_at = %s,
+                        updated_at = %s,
+                        address = %s,
+                        address_2 = %s,
+                        city = %s,
+                        state = %s,
+                        zip = %s,
+                        latitude = %s,
+                        longitude = %s,
+                        contacts = %s,
+                        notes = %s,
+                        get_sms = %s,
+                        opt_out = %s,
+                        disabled = %s,
+                        no_email = %s,
+                        properties = %s,
+                        referred_by = %s
+                    WHERE id = %s
+                """
+                values = (
+                    item["firstname"],
+                    item["lastname"],
+                    item["fullname"],
+                    item["business_name"],
+                    item["email"],
+                    item["phone"],
+                    item["mobile"],
+                    format_date_fordb(item["created_at"]),
+                    format_date_fordb(item["updated_at"]),
+                    item["address"],
+                    item["address_2"],
+                    item["city"],
+                    item["state"],
+                    item["zip"],
+                    item["latitude"],
+                    item["longitude"],
+                    json.dumps(item["contacts"]),  # Convert contacts list to JSON string
+                    item["notes"],
+                    item["get_sms"],
+                    item["opt_out"],
+                    item["disabled"],
+                    item["no_email"],
+                    json.dumps(item["properties"]),
+                    item["referred_by"],
+                    item["id"]
+                )
+                cursor.execute(sql, values)
+        else:
+            added += 1
+            sql = """
+                INSERT INTO customers (
+                    id, firstname, lastname, fullname, business_name, email, phone, mobile, 
+                    created_at, updated_at, address, address_2, city, state, zip, latitude, longitude, 
+                    contacts, notes, get_sms, opt_out, disabled, no_email, properties, referred_by
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            values = (
+                item["id"],
+                item["firstname"],
+                item["lastname"],
+                item["fullname"],
+                item["business_name"],
+                item["email"],
+                item["phone"],
+                item["mobile"],
+                format_date_fordb(item["created_at"]),
+                format_date_fordb(item["updated_at"]),
+                item["address"],
+                item["address_2"],
+                item["city"],
+                item["state"],
+                item["zip"],
+                item["latitude"],
+                item["longitude"],
+                json.dumps(item["contacts"]),  # Convert contacts list to JSON string
+                item["notes"],
+                item["get_sms"],
+                item["opt_out"],
+                item["disabled"],
+                item["no_email"],
+                json.dumps(item["properties"]),
+                item["referred_by"]
+            )
+            cursor.execute(sql, values)
+    print(f"{log_ts()} Added {added} new customers, updated {updated} existing customers.")
 
 
 def insert_comments(cursor, items, last_run_timestamp_unix):
@@ -574,6 +731,20 @@ def compare_id_sums(cursor, data, table_name):
             print(f"{log_ts()} The sum of IDs does not match.")
         return sum_of_ids_api == comments_sum
 
+    if table_name == "customers":
+        cursor.execute("SELECT SUM(id) FROM customers")
+        customers_sum = cursor.fetchone()[0]
+
+        sum_of_ids_api = sum(customer["id"] for customer in data)
+        print(f"{log_ts()} Sum of IDs from customers API: {sum_of_ids_api}")
+        print(f"{log_ts()} Sum of IDs from customers DB: {customers_sum}")
+
+        if sum_of_ids_api == customers_sum:
+            print(f"{log_ts()} Customer ID's match.")
+        else:
+            print(f"{log_ts()} The sum of IDs does not match.")
+        return sum_of_ids_api == customers_sum
+
 
 def move_deleted_contacts_to_deleted_table(cursor, connection, data):
     """compare the id sums, and move any entries not
@@ -653,6 +824,99 @@ def move_deleted_contacts_to_deleted_table(cursor, connection, data):
 
         print(f"{log_ts()} Operation completed successfully.")
         print(f"{log_ts()} Deleted {deleted} contacts.")
+    else:
+        print(f"{log_ts()} The sum of IDs matches.")
+
+def move_deleted_customers_to_deleted_table(cursor, connection, data):
+    """compare the id sums, and move any entries not
+    in the data array to the deleted_customers table"""
+
+    # Get the sum of the IDs from the database
+    cursor.execute("SELECT SUM(id) FROM customers")
+    customers_sum = cursor.fetchone()[0]
+
+    # Get the sum of the IDs from the API data
+    sum_of_ids_api = sum(customer["id"] for customer in data)
+    print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
+    print(f"{log_ts()} Sum of IDs from DB: {customers_sum}")
+
+    if sum_of_ids_api != customers_sum:
+        deleted = 0
+        print(
+            f"{log_ts()} The sum of IDs does not match. Identifying deleted customers..."
+        )
+
+        cursor.execute(
+            """CREATE TABLE IF NOT EXISTS deleted_customers (
+            id INT PRIMARY KEY,
+            firstname VARCHAR(255),
+            lastname VARCHAR(255),
+            fullname VARCHAR(255),
+            business_name VARCHAR(255),
+            email VARCHAR(255),
+            phone VARCHAR(255),
+            mobile VARCHAR(255),
+            created_at DATETIME,
+            updated_at DATETIME,
+            pdf_url TEXT,
+            address VARCHAR(255),
+            address_2 VARCHAR(255),
+            city VARCHAR(255),
+            state VARCHAR(255),
+            zip VARCHAR(255),
+            latitude FLOAT,
+            longitude FLOAT,
+            notes TEXT,
+            get_sms BOOLEAN,
+            opt_out BOOLEAN,
+            disabled BOOLEAN,
+            no_email BOOLEAN,
+            location_name VARCHAR(255),
+            location_id INT,
+            properties JSON,
+            online_profile_url TEXT,
+            tax_rate_id INT,
+            notification_email VARCHAR(255),
+            invoice_cc_emails VARCHAR(255),
+            invoice_term_id INT,
+            referred_by VARCHAR(255),
+            ref_customer_id INT,
+            business_and_full_name VARCHAR(255),
+            business_then_name VARCHAR(255),
+            contacts JSON
+    )
+    """
+        )
+
+        # Get the set of IDs from the API data
+        api_ids = {customer["id"] for customer in data}
+
+        # Query all IDs from the customers table
+        cursor.execute("SELECT id FROM customers")
+        db_ids = cursor.fetchall()
+
+        # Check for IDs that are in the DB but not in the API data
+        for (db_id,) in db_ids:
+            if db_id not in api_ids:
+                print(
+                    f"{log_ts()} Moving customer with ID {db_id} to deleted_customers table..."
+                )
+
+                # Copy the row to the deleted_contacts table
+                cursor.execute(
+                    """INSERT INTO deleted_customers SELECT
+                                * FROM contacts WHERE id = %s""",
+                    (db_id,),
+                )
+
+                # Delete the row from the contacts table
+                cursor.execute("DELETE FROM customers WHERE id = %s", (db_id,))
+                deleted += 1
+
+                connection.commit()
+
+        print(f"{log_ts()} Operation completed successfully.")
+        print(f"{log_ts()} Deleted {deleted} customers.")
     else:
         print(f"{log_ts()} The sum of IDs matches.")
 
