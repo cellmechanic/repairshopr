@@ -11,3 +11,4 @@ last_run_customers.txt
 __pycache__/
 .vscode/
 library/__pycache__
+.idea
