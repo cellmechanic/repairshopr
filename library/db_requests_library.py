@@ -126,7 +126,7 @@ def create_comments_table_if_not_exists(cursor):
     )
 
 
-def connect_to_db(config):
+def connect_to_db(config: object) -> object:
     """connect to the db"""
     connection = mysql.connector.connect(**config)
     cursor = connection.cursor()

@@ -7,7 +7,7 @@ from library.fix_date_time_library import log_ts
 
 
 def get_contacts(page):
-    """api request"""
+    """api request for contacts"""
     url = f"{env_library.api_url_contact}?page={page}"
     headers = {"Authorization": f"Bearer {env_library.api_key_contact}"}
     try:
@@ -22,7 +22,7 @@ def get_contacts(page):
 
 
 def get_invoice_lines(page):
-    """api request"""
+    """api request for invoice line items"""
     url = f"{env_library.api_url_invoice}?page={page}"
     headers = {"Authorization": f"Bearer {env_library.api_key_invoice}"}
     try:
@@ -37,7 +37,7 @@ def get_invoice_lines(page):
 
 
 def get_tickets(page=None, look_back_period=None):
-    """api request"""
+    """api request for ticket data"""
 
     # base url / header key
     url = f"{env_library.api_url_tickets}"
@@ -64,4 +64,6 @@ def get_tickets(page=None, look_back_period=None):
 
 def get_date_for_header(look_back):
     date_before = datetime.now() - timedelta(days=look_back)
-    return date_before.strftime('%Y-%m-%d')
+    formatted_date = date_before.strftime('%Y-%m-%d')
+    print(f"{log_ts()} Looking back to {formatted_date}")
+    return formatted_date
