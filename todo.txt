@@ -1,9 +1,11 @@
-make tickets update - use a 60 day look back period, make a function to figure this out, 
-    get the format correct for the api header, 
-put tickets update in cron
-remove a lot of the debug printouts so the logs don't become unreadable
-customers module
+# make tickets update - use a 60-day look back period, make a function to figure this out,
+# get the format correct for the api header,
+# put tickets update in cron
 customers module to production / cron
-estimates module
 estimates module to production / cron
-move all the last run files into one last run file, and also make the timestamp human readable beside the unix one.
+invoices module to production / cron
+payments module to production / cron
+logging
+remove a lot of the debug printouts so the logs don't become unreadable
+move all the last run files into one last run file, and also make the timestamp human-readable beside the unix one.
+move the overnight rebuilds to be one file that just runs continuously
