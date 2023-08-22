@@ -21,6 +21,21 @@ def get_contacts(page):
         return None
 
 
+def get_customers(page):
+    """api request for customers"""
+    url = f"{env_library.api_url_customers}?page={page}"
+    headers = {"Authorization": f"Bearer {env_library.api_key_customers}"}
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code != 200:
+            print(f"{log_ts()} Error fetching contacts on page {page}: {response.text}")
+            return None
+        return response.json()
+    except requests.RequestException as error:
+        print(f"{log_ts()} Failed to get data for page {page}: {str(error)}")
+        return None
+
+
 def get_invoice_lines(page):
     """api request for invoice line items"""
     url = f"{env_library.api_url_invoice}?page={page}"
