@@ -172,7 +172,7 @@ def create_comments_table_if_not_exists(cursor):
     )
 
 
-def connect_to_db(config: object) -> object:
+def connect_to_db(config):
     """connect to the db"""
     connection = mysql.connector.connect(**config)
     cursor = connection.cursor()
@@ -827,6 +827,7 @@ def move_deleted_contacts_to_deleted_table(cursor, connection, data):
     else:
         print(f"{log_ts()} The sum of IDs matches.")
 
+
 def move_deleted_customers_to_deleted_table(cursor, connection, data):
     """compare the id sums, and move any entries not
     in the data array to the deleted_customers table"""
@@ -905,7 +906,7 @@ def move_deleted_customers_to_deleted_table(cursor, connection, data):
                 # Copy the row to the deleted_contacts table
                 cursor.execute(
                     """INSERT INTO deleted_customers SELECT
-                                * FROM contacts WHERE id = %s""",
+                                * FROM customers WHERE id = %s""",
                     (db_id,),
                 )
 
