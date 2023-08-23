@@ -13,6 +13,89 @@ def rate_limit():
     return 30 / 128
 
 
+def connect_to_db(config):
+    """connect to the db"""
+    connection = mysql.connector.connect(**config)
+    cursor = connection.cursor()
+    return cursor, connection
+
+
+def compare_id_sums(cursor, data, table_name):
+    """compare the id sums to make sure they match"""
+    if table_name == "contacts":
+        cursor.execute("SELECT SUM(id) FROM contacts")
+        contacts_sum = cursor.fetchone()[0]
+
+        sum_of_ids_api = sum(contact["id"] for contact in data)
+        print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
+        print(f"{log_ts()} Sum of IDs from DB: {contacts_sum}")
+
+        if sum_of_ids_api == contacts_sum:
+            print(f"{log_ts()} Both ID sums are matching.")
+        else:
+            print(f"{log_ts()} The sum of IDs does not match.")
+
+        return sum_of_ids_api == contacts_sum
+
+    if table_name == "invoice_items":
+        cursor.execute("SELECT SUM(id) FROM invoice_items")
+        line_items_sum = cursor.fetchone()[0]
+
+        sum_of_ids_api = sum(invoice_item["id"] for invoice_item in data)
+        print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
+        print(f"{log_ts()} Sum of IDs from DB: {line_items_sum}")
+
+        if sum_of_ids_api == line_items_sum:
+            print(f"{log_ts()} Both ID sums are matching.")
+        else:
+            print(f"{log_ts()} The sum of IDs does not match.")
+
+        print(log_ts(), sum_of_ids_api == line_items_sum)
+        return sum_of_ids_api == line_items_sum
+
+    if table_name == "tickets":
+        cursor.execute("SELECT SUM(id) FROM tickets")
+        tickets_sum = cursor.fetchone()[0]
+
+        sum_of_ids_api = sum(ticket["id"] for ticket in data)
+        print(f"{log_ts()} Sum of IDs from tickets API: {sum_of_ids_api}")
+        print(f"{log_ts()} Sum of IDs from tickets DB: {tickets_sum}")
+
+        if sum_of_ids_api == tickets_sum:
+            print(f"{log_ts()} Ticket ID's match.")
+        else:
+            print(f"{log_ts()} The sum of IDs does not match.")
+        return sum_of_ids_api == tickets_sum
+
+    if table_name == "comments":
+        cursor.execute("SELECT SUM(id) FROM comments")
+        comments_sum = cursor.fetchone()[0]
+
+        sum_of_ids_api = sum(comment["id"] for comment in data)
+        print(f"{log_ts()} Sum of IDs from comments API: {sum_of_ids_api}")
+        print(f"{log_ts()} Sum of IDs from comments DB: {comments_sum}")
+
+        if sum_of_ids_api == comments_sum:
+            print(f"{log_ts()} Comment ID's match.")
+        else:
+            print(f"{log_ts()} The sum of IDs does not match.")
+        return sum_of_ids_api == comments_sum
+
+    if table_name == "customers":
+        cursor.execute("SELECT SUM(id) FROM customers")
+        customers_sum = cursor.fetchone()[0]
+
+        sum_of_ids_api = sum(customer["id"] for customer in data)
+        print(f"{log_ts()} Sum of IDs from customers API: {sum_of_ids_api}")
+        print(f"{log_ts()} Sum of IDs from customers DB: {customers_sum}")
+
+        if sum_of_ids_api == customers_sum:
+            print(f"{log_ts()} Customer ID's match.")
+        else:
+            print(f"{log_ts()} The sum of IDs does not match.")
+        return sum_of_ids_api == customers_sum
+
+
 def create_contact_table_if_not_exists(cursor):
     """create the contact db if it doesn't already exist"""
     cursor.execute(
@@ -122,6 +205,33 @@ def create_invoice_items_table_if_not_exists(config):
     return cursor, connection
 
 
+def create_estimates_table_if_not_exists(cursor):
+    """Create the estimates table if it doesn't already exist."""
+
+    # Create the estimates table if not exists
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS estimates (
+            id INT PRIMARY KEY,
+            customer_id INT,
+            customer_business_then_name VARCHAR(4096),
+            number VARCHAR(255),
+            status VARCHAR(255),
+            created_at DATETIME,
+            updated_at DATETIME,
+            date DATETIME,
+            subtotal DECIMAL(10, 2),
+            total DECIMAL(10, 2),
+            tax DECIMAL(10, 2),
+            ticket_id INT,
+            pdf_url VARCHAR(2048),
+            location_id INT,
+            invoice_id INT,
+            employee VARCHAR(255)
+        )
+        """
+    )
+
+
 def create_tickets_table_if_not_exists(cursor):
     """Create the ticket table if it doesn't already exist."""
     cursor.execute(
@@ -170,13 +280,6 @@ def create_comments_table_if_not_exists(cursor):
         )
         """
     )
-
-
-def connect_to_db(config):
-    """connect to the db"""
-    connection = mysql.connector.connect(**config)
-    cursor = connection.cursor()
-    return cursor, connection
 
 
 def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
@@ -367,6 +470,90 @@ def insert_tickets(cursor, items, last_run_timestamp_unix):
             cursor.execute(sql, values)
 
     print(f"{log_ts()} Added {added} new tickets, updated {updated} existing tickets.")
+
+
+def insert_estimates(cursor, items, last_run_timestamp_unix):
+    """Insert or update estimates based on the items provided."""
+    added = 0
+    updated = 0
+    for item in items:
+        # Check if the record exists and get the current updated_at value
+        cursor.execute("SELECT updated_at FROM estimates WHERE id = %s", (item["id"],))
+        existing_record = cursor.fetchone()
+
+        if existing_record:
+            if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
+                # If record exists and updated_at is greater, update it
+                updated += 1
+                sql = """
+                    UPDATE estimates SET
+                        customer_id = %s,
+                        customer_business_then_name = %s,
+                        number = %s,
+                        status = %s,
+                        created_at = %s,
+                        updated_at = %s,
+                        date = %s,
+                        subtotal = %s,
+                        total = %s,
+                        tax = %s,
+                        ticket_id = %s,
+                        pdf_url = %s,
+                        location_id = %s,
+                        invoice_id = %s,
+                        employee = %s
+                    WHERE id = %s
+                """
+                values = (
+                    item["customer_id"],
+                    item["customer_business_then_name"],
+                    item["number"],
+                    item["status"],
+                    format_date_fordb(item["created_at"]),
+                    format_date_fordb(item["updated_at"]),
+                    format_date_fordb(item["date"]),
+                    item["subtotal"],
+                    item["total"],
+                    item["tax"],
+                    item["ticket_id"],
+                    item["pdf_url"],
+                    item["location_id"],
+                    item["invoice_id"],
+                    item["employee"],
+                    item["id"],
+                )
+                cursor.execute(sql, values)
+        else:
+            # If record doesn't exist, insert it
+            added += 1
+            sql = """
+                INSERT INTO estimates (
+                    id, customer_id, customer_business_then_name, number, status,
+                    created_at, updated_at, date, subtotal, total, tax, ticket_id,
+                    pdf_url, location_id, invoice_id, employee
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            values = (
+                item["id"],
+                item["customer_id"],
+                item["customer_business_then_name"],
+                item["number"],
+                item["status"],
+                format_date_fordb(item["created_at"]),
+                format_date_fordb(item["updated_at"]),
+                format_date_fordb(item["date"]),
+                item["subtotal"],
+                item["total"],
+                item["tax"],
+                item["ticket_id"],
+                item["pdf_url"],
+                item["location_id"],
+                item["invoice_id"],
+                item["employee"],
+            )
+            cursor.execute(sql, values)
+
+    print(f"{log_ts()} Added {added} new estimates, updated {updated} existing estimates.")
 
 
 def insert_contacts(cursor, items, last_run_timestamp_unix):
@@ -668,82 +855,6 @@ def insert_comments(cursor, items, last_run_timestamp_unix):
         f"{log_ts()} Added {added} new comments, updated {updated} existing comments."
     )
     return comments_data
-
-
-def compare_id_sums(cursor, data, table_name):
-    """compare the id sums to make sure they match"""
-    if table_name == "contacts":
-        cursor.execute("SELECT SUM(id) FROM contacts")
-        contacts_sum = cursor.fetchone()[0]
-
-        sum_of_ids_api = sum(contact["id"] for contact in data)
-        print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
-        print(f"{log_ts()} Sum of IDs from DB: {contacts_sum}")
-
-        if sum_of_ids_api == contacts_sum:
-            print(f"{log_ts()} Both ID sums are matching.")
-        else:
-            print(f"{log_ts()} The sum of IDs does not match.")
-
-        return sum_of_ids_api == contacts_sum
-
-    if table_name == "invoice_items":
-        cursor.execute("SELECT SUM(id) FROM invoice_items")
-        line_items_sum = cursor.fetchone()[0]
-
-        sum_of_ids_api = sum(invoice_item["id"] for invoice_item in data)
-        print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
-        print(f"{log_ts()} Sum of IDs from DB: {line_items_sum}")
-
-        if sum_of_ids_api == line_items_sum:
-            print(f"{log_ts()} Both ID sums are matching.")
-        else:
-            print(f"{log_ts()} The sum of IDs does not match.")
-
-        print(log_ts(), sum_of_ids_api == line_items_sum)
-        return sum_of_ids_api == line_items_sum
-
-    if table_name == "tickets":
-        cursor.execute("SELECT SUM(id) FROM tickets")
-        tickets_sum = cursor.fetchone()[0]
-
-        sum_of_ids_api = sum(ticket["id"] for ticket in data)
-        print(f"{log_ts()} Sum of IDs from tickets API: {sum_of_ids_api}")
-        print(f"{log_ts()} Sum of IDs from tickets DB: {tickets_sum}")
-
-        if sum_of_ids_api == tickets_sum:
-            print(f"{log_ts()} Ticket ID's match.")
-        else:
-            print(f"{log_ts()} The sum of IDs does not match.")
-        return sum_of_ids_api == tickets_sum
-
-    if table_name == "comments":
-        cursor.execute("SELECT SUM(id) FROM comments")
-        comments_sum = cursor.fetchone()[0]
-
-        sum_of_ids_api = sum(comment["id"] for comment in data)
-        print(f"{log_ts()} Sum of IDs from comments API: {sum_of_ids_api}")
-        print(f"{log_ts()} Sum of IDs from comments DB: {comments_sum}")
-
-        if sum_of_ids_api == comments_sum:
-            print(f"{log_ts()} Comment ID's match.")
-        else:
-            print(f"{log_ts()} The sum of IDs does not match.")
-        return sum_of_ids_api == comments_sum
-
-    if table_name == "customers":
-        cursor.execute("SELECT SUM(id) FROM customers")
-        customers_sum = cursor.fetchone()[0]
-
-        sum_of_ids_api = sum(customer["id"] for customer in data)
-        print(f"{log_ts()} Sum of IDs from customers API: {sum_of_ids_api}")
-        print(f"{log_ts()} Sum of IDs from customers DB: {customers_sum}")
-
-        if sum_of_ids_api == customers_sum:
-            print(f"{log_ts()} Customer ID's match.")
-        else:
-            print(f"{log_ts()} The sum of IDs does not match.")
-        return sum_of_ids_api == customers_sum
 
 
 def move_deleted_contacts_to_deleted_table(cursor, connection, data):

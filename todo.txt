@@ -10,3 +10,4 @@ remove a lot of the debug printouts so the logs don't become unreadable
 move all the last run files into one last run file, and also make the timestamp human-readable beside the unix one.
 move the overnight rebuilds to be one file that just runs continuously
 go thru a json payload for each DB and make sure there's no missing data
+I think the last run files are not needed, possibly just compare the db updated_at to the api version...
