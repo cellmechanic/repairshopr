@@ -95,6 +95,20 @@ def compare_id_sums(cursor, data, table_name):
             print(f"{log_ts()} The sum of IDs does not match.")
         return sum_of_ids_api == customers_sum
 
+    if table_name == "estimates":
+        cursor.execute("SELECT SUM(id) FROM estimates")
+        estimates_sum = cursor.fetchone()[0]
+
+        sum_of_ids_api = sum(estimate["id"] for estimate in data)
+        print(f"{log_ts()} Sum of IDs from estimates API: {sum_of_ids_api}")
+        print(f"{log_ts()} Sum of IDs from estimates DB: {estimates_sum}")
+
+        if sum_of_ids_api == estimates_sum:
+            print(f"{log_ts()} Estimate ID's match.")
+        else:
+            print(f"{log_ts()} The sum of IDs does not match.")
+        return sum_of_ids_api == estimates_sum
+
 
 def create_contact_table_if_not_exists(cursor):
     """create the contact db if it doesn't already exist"""
@@ -553,7 +567,9 @@ def insert_estimates(cursor, items, last_run_timestamp_unix):
             )
             cursor.execute(sql, values)
 
-    print(f"{log_ts()} Added {added} new estimates, updated {updated} existing estimates.")
+    print(
+        f"{log_ts()} Added {added} new estimates, updated {updated} existing estimates."
+    )
 
 
 def insert_contacts(cursor, items, last_run_timestamp_unix):
@@ -684,7 +700,9 @@ def insert_customers(cursor, items, last_run_timestamp_unix):
         existing_record = cursor.fetchone()
         if existing_record:
             if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
-                print(f"{log_ts()} Customer {item['fullname']} has been updated since last run.")
+                print(
+                    f"{log_ts()} Customer {item['fullname']} has been updated since last run."
+                )
                 updated += 1
                 sql = """
                     UPDATE customers SET 
@@ -731,7 +749,9 @@ def insert_customers(cursor, items, last_run_timestamp_unix):
                     item["zip"],
                     item["latitude"],
                     item["longitude"],
-                    json.dumps(item["contacts"]),  # Convert contacts list to JSON string
+                    json.dumps(
+                        item["contacts"]
+                    ),  # Convert contacts list to JSON string
                     item["notes"],
                     item["get_sms"],
                     item["opt_out"],
@@ -739,7 +759,7 @@ def insert_customers(cursor, items, last_run_timestamp_unix):
                     item["no_email"],
                     json.dumps(item["properties"]),
                     item["referred_by"],
-                    item["id"]
+                    item["id"],
                 )
                 cursor.execute(sql, values)
         else:
@@ -777,10 +797,12 @@ def insert_customers(cursor, items, last_run_timestamp_unix):
                 item["disabled"],
                 item["no_email"],
                 json.dumps(item["properties"]),
-                item["referred_by"]
+                item["referred_by"],
             )
             cursor.execute(sql, values)
-    print(f"{log_ts()} Added {added} new customers, updated {updated} existing customers.")
+    print(
+        f"{log_ts()} Added {added} new customers, updated {updated} existing customers."
+    )
 
 
 def insert_comments(cursor, items, last_run_timestamp_unix):
@@ -1173,7 +1195,9 @@ def move_deleted_tickets_to_deleted_table(cursor, connection, data):
                     (db_id,),
                 )
                 affected_rows = cursor.rowcount
-                print(f"Moved {affected_rows} comments to deleted_comments for ticket_id {db_id}.")
+                print(
+                    f"Moved {affected_rows} comments to deleted_comments for ticket_id {db_id}."
+                )
 
                 cursor.execute("DELETE FROM comments WHERE ticket_id = %s", (db_id,))
 
@@ -1268,3 +1292,77 @@ def move_deleted_comments_to_deleted_table(cursor, connection, data):
         print(f"{log_ts()} {deleted} comments were deleted.")
     else:
         print(f"{log_ts()} The sum of IDs matches.")
+
+
+def move_deleted_estimates_to_deleted_table(
+    cursor: object, connection: object, data: object
+) -> object:
+    """Compare the id sums, and move any entries not
+    in the data array to the deleted_estimates table"""
+
+    # Get the sum of the IDs from the database
+    cursor.execute("SELECT SUM(id) FROM estimates")
+    estimates_sum = cursor.fetchone()[0]
+
+    # Get the sum of the IDs from the API data
+    sum_of_ids_api = sum(item["id"] for item in data)
+    print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
+    print(f"{log_ts()} Sum of IDs from DB: {estimates_sum}")
+
+    if sum_of_ids_api != estimates_sum:
+        deleted = 0
+        print(
+            f"{log_ts()} The sum of IDs does not match. Identifying deleted estimates..."
+        )
+        cursor.execute(
+            """CREATE TABLE IF NOT EXISTS deleted_estimates (
+            id INT PRIMARY KEY,
+            customer_id INT,
+            customer_business_then_name VARCHAR(255),
+            number VARCHAR(255),
+            status VARCHAR(255),
+            created_at DATETIME,
+            updated_at DATETIME,
+            date DATE,
+            subtotal FLOAT,
+            total FLOAT,
+            tax FLOAT,
+            ticket_id INT,
+            pdf_url VARCHAR(255),
+            location_id INT,
+            invoice_id INT,
+            employee VARCHAR(255)
+        )
+        """
+        )
+
+        # Get the set of IDs from the API data
+        api_ids = {item["id"] for item in data}
+
+        # Query all IDs from the estimates table
+        cursor.execute("SELECT id FROM estimates")
+        db_ids = cursor.fetchall()
+
+        # Check for IDs that are in the DB but not in the API data
+        for (db_id,) in db_ids:
+            if db_id not in api_ids:
+                print(
+                    f"{log_ts()} Moving estimate with ID {db_id}"
+                    " to deleted_estimates table..."
+                )
+
+                # Copy the row to the deleted_estimates table
+                cursor.execute(
+                    """INSERT INTO deleted_estimates SELECT
+                                * FROM estimates WHERE id = %s""",
+                    (db_id,),
+                )
+
+                # Delete the row from the estimates table
+                cursor.execute("DELETE FROM estimates WHERE id = %s", (db_id,))
+                deleted += 1
+                connection.commit()
+
+        print(
+            f"{log_ts()} Operation completed successfully. Deleted {deleted} estimates."
+        )

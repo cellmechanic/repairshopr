@@ -38,7 +38,7 @@ def ticket_days(lookback_days=60):
 
     # total_pages + 1
     for page in range(1, total_pages + 1):
-        data = get_tickets(page)
+        data = get_tickets(page, lookback_days)
         if data is not None:
             all_data.extend(data["tickets"])
             print(f"{log_ts()} Added in page # {page}")

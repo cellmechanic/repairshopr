@@ -21,12 +21,15 @@ def get_contacts(page):
         return None
 
 
-def get_estimates(page):
+def get_estimates(page=None):
     """api request for estimates"""
-    url = f"{env_library.api_url_estimates}?page={page}"
+
+    url = f"{env_library.api_url_estimates}"
     headers = {"Authorization": f"Bearer {env_library.api_key_estimates}"}
+    param = {"page": page}
+
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=headers, params=param, timeout=10)
         if response.status_code != 200:
             print(f"{log_ts()} Error fetching estimates on page {page}: {response.text}")
             return None
