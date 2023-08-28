@@ -1591,5 +1591,3 @@ def move_deleted_invoices_to_deleted_table(cursor, connection, data):
         print(
             f"{log_ts()} Operation completed successfully. Deleted {deleted} invoices."
         )
-
-

@@ -90,7 +90,6 @@ def invoices(full_run=False, lookback_days=14):
         else:
             print(f"{log_ts()} No deletes found in invoices, moving on...")
 
- 
     connection.commit()
     connection.close()
 

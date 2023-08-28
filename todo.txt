@@ -3,7 +3,7 @@
 # put tickets update in cron
 # customers module to production / cron
 # estimates module to production / cron
-invoices module to production / cron
+# invoices module to production / cron
 payments module to production / cron
 logging
 remove a lot of the debug printouts so the logs don't become unreadable
