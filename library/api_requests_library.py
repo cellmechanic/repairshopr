@@ -31,7 +31,9 @@ def get_estimates(page=None):
     try:
         response = requests.get(url, headers=headers, params=param, timeout=10)
         if response.status_code != 200:
-            print(f"{log_ts()} Error fetching estimates on page {page}: {response.text}")
+            print(
+                f"{log_ts()} Error fetching estimates on page {page}: {response.text}"
+            )
             return None
         return response.json()
     except requests.RequestException as error:
@@ -57,11 +59,13 @@ def get_customers(page):
 def get_invoice_lines(page):
     """api request for invoice line items"""
     url = f"{env_library.api_url_invoice}?page={page}"
-    headers = {"Authorization": f"Bearer {env_library.api_key_invoice}"}
+    headers = {"Authorization": f"Bearer {env_library.api_key_invoice_lines}"}
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code != 200:
-            print(f"{log_ts()} Error fetching invoice line items on page {page}: {response.text}")
+            print(
+                f"{log_ts()} Error fetching invoice line items on page {page}: {response.text}"
+            )
             return None
         return response.json()
     except requests.RequestException as error:
@@ -86,7 +90,9 @@ def get_tickets(page=None, look_back_period=None):
     try:
         response = requests.get(url, headers=headers, params=params, timeout=10)
         if response.status_code != 200:
-            print(f"{log_ts()} Error fetching invoice line items on page {page}: {response.text}")
+            print(
+                f"{log_ts()} Error fetching invoice line items on page {page}: {response.text}"
+            )
             return None
         return response.json()
 
@@ -95,8 +101,34 @@ def get_tickets(page=None, look_back_period=None):
         return None
 
 
+def get_invoices(page=None, look_back_period=None):
+    """API request for invoice data."""
+
+    # base url / header key
+    url = f"{env_library.api_url_invoice}"
+    headers = {"Authorization": f"Bearer {env_library.api_key_invoice}"}
+
+    # params
+    params = {}
+    if page is not None:
+        params["page"] = page
+    if look_back_period is not None:
+        params["since_updated_at"] = get_date_for_header(look_back_period)
+
+    try:
+        response = requests.get(url, headers=headers, params=params, timeout=10)
+        if response.status_code != 200:
+            print(f"{log_ts()} Error fetching invoices on page {page}: {response.text}")
+            return None
+        return response.json()
+
+    except requests.RequestException as error:
+        print(f"{log_ts()} Failed to get invoice data for page {page}: {str(error)}")
+        return None
+
+
 def get_date_for_header(look_back):
     date_before = datetime.now() - timedelta(days=look_back)
-    formatted_date = date_before.strftime('%Y-%m-%d')
+    formatted_date = date_before.strftime("%Y-%m-%d")
     print(f"{log_ts()} Looking back to {formatted_date}")
     return formatted_date

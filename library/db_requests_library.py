@@ -109,6 +109,19 @@ def compare_id_sums(cursor, data, table_name):
             print(f"{log_ts()} The sum of IDs does not match.")
         return sum_of_ids_api == estimates_sum
 
+    if table_name == "invoices":
+        cursor.execute("SELECT SUM(id) FROM invoices")
+        invoices_sum = cursor.fetchone()[0]
+
+        sum_of_ids_api = sum(invoice["id"] for invoice in data)
+        print(f"{log_ts()} Sum of IDs from invoices API: {sum_of_ids_api}")
+        print(f"{log_ts()} Sum of IDs from invoices DB: {invoices_sum}")
+
+        if sum_of_ids_api == invoices_sum:
+            print(f"{log_ts()} Invoice ID's match.")
+        else:
+            print(f"{log_ts()} The sum of IDs does not match.")
+
 
 def create_contact_table_if_not_exists(cursor):
     """create the contact db if it doesn't already exist"""
@@ -184,6 +197,37 @@ def create_customer_table_if_not_exists(cursor):
             business_and_full_name VARCHAR(255),
             business_then_name VARCHAR(255),
             contacts JSON
+        )
+        """
+    )
+
+
+def create_invoices_table_if_not_exists(cursor):
+    """create the invoices db if it doesn't already exist"""
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS invoices (
+            id INT PRIMARY KEY,
+            customer_id INT,
+            customer_business_then_name VARCHAR(255),
+            number VARCHAR(255),
+            created_at DATETIME,
+            updated_at DATETIME,
+            date DATE,
+            due_date DATE,
+            subtotal DECIMAL(10, 2),
+            total DECIMAL(10, 2),
+            tax DECIMAL(10, 2),
+            verified_paid BOOLEAN,
+            tech_marked_paid BOOLEAN,
+            ticket_id INT,
+            user_id INT,
+            pdf_url TEXT,
+            is_paid BOOLEAN,
+            location_id INT,
+            po_number VARCHAR(255),
+            contact_id INT,
+            note TEXT,
+            hardwarecost DECIMAL(10, 2)
         )
         """
     )
@@ -879,6 +923,110 @@ def insert_comments(cursor, items, last_run_timestamp_unix):
     return comments_data
 
 
+def insert_invoices(cursor, items, last_run_timestamp_unix):
+    """Insert or update invoices based on the items provided."""
+    added = 0
+    updated = 0
+    for item in items:
+        # Check if the record exists and get the current updated_at value
+        cursor.execute("SELECT updated_at FROM invoices WHERE id = %s", (item["id"],))
+        existing_record = cursor.fetchone()
+
+        if existing_record:
+            if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
+                # If record exists and updated_at is greater, update it
+                updated += 1
+                sql = """
+                    UPDATE invoices SET
+                        customer_id = %s,
+                        customer_business_then_name = %s,
+                        number = %s,
+                        created_at = %s,
+                        updated_at = %s,
+                        date = %s,
+                        due_date = %s,
+                        subtotal = %s,
+                        total = %s,
+                        tax = %s,
+                        verified_paid = %s,
+                        tech_marked_paid = %s,
+                        ticket_id = %s,
+                        user_id = %s,
+                        pdf_url = %s,
+                        is_paid = %s,
+                        location_id = %s,
+                        po_number = %s,
+                        contact_id = %s,
+                        note = %s,
+                        hardwarecost = %s
+                    WHERE id = %s
+                """
+                values = (
+                    item["customer_id"],
+                    item["customer_business_then_name"],
+                    item["number"],
+                    format_date_fordb(item["created_at"]),
+                    format_date_fordb(item["updated_at"]),
+                    format_date_fordb(item["date"]),
+                    format_date_fordb(item["due_date"]),
+                    item["subtotal"],
+                    item["total"],
+                    item["tax"],
+                    item["verified_paid"],
+                    item["tech_marked_paid"],
+                    item["ticket_id"],
+                    item["user_id"],
+                    item["pdf_url"],
+                    item["is_paid"],
+                    item["location_id"],
+                    item["po_number"],
+                    item["contact_id"],
+                    item["note"],
+                    item["hardwarecost"],
+                    item["id"],
+                )
+                cursor.execute(sql, values)
+        else:
+            # If record doesn't exist, insert it
+            added += 1
+            sql = """
+                INSERT INTO invoices (
+                    id, customer_id, customer_business_then_name, number, created_at, updated_at,
+                    date, due_date, subtotal, total, tax, verified_paid, tech_marked_paid, ticket_id,
+                    user_id, pdf_url, is_paid, location_id, po_number, contact_id, note, hardwarecost
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            values = (
+                item["id"],
+                item["customer_id"],
+                item["customer_business_then_name"],
+                item["number"],
+                format_date_fordb(item["created_at"]),
+                format_date_fordb(item["updated_at"]),
+                format_date_fordb(item["date"]),
+                format_date_fordb(item["due_date"]),
+                item["subtotal"],
+                item["total"],
+                item["tax"],
+                item["verified_paid"],
+                item["tech_marked_paid"],
+                item["ticket_id"],
+                item["user_id"],
+                item["pdf_url"],
+                item["is_paid"],
+                item["location_id"],
+                item["po_number"],
+                item["contact_id"],
+                item["note"],
+                item["hardwarecost"],
+            )
+            cursor.execute(sql, values)
+
+    print(
+        f"{log_ts()} Added {added} new invoices, updated {updated} existing invoices."
+    )
+
+
 def move_deleted_contacts_to_deleted_table(cursor, connection, data):
     """compare the id sums, and move any entries not
     in the data array to the deleted_contacts table"""
@@ -1294,9 +1442,7 @@ def move_deleted_comments_to_deleted_table(cursor, connection, data):
         print(f"{log_ts()} The sum of IDs matches.")
 
 
-def move_deleted_estimates_to_deleted_table(
-    cursor: object, connection: object, data: object
-) -> object:
+def move_deleted_estimates_to_deleted_table(cursor, connection, data):
     """Compare the id sums, and move any entries not
     in the data array to the deleted_estimates table"""
 
@@ -1365,4 +1511,82 @@ def move_deleted_estimates_to_deleted_table(
 
         print(
             f"{log_ts()} Operation completed successfully. Deleted {deleted} estimates."
+        )
+
+
+def move_deleted_invoices_to_deleted_table(cursor, connection, data):
+    """Compare the id sums, and move any entries not
+    in the data array to the deleted_invoices table"""
+
+    # Get the sum of the IDs from the database
+    cursor.execute("SELECT SUM(id) FROM invoices")
+    invoices_sum = cursor.fetchone()[0]
+
+    # Get the sum of the IDs from the API data
+    sum_of_ids_api = sum(item["id"] for item in data)
+    print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
+    print(f"{log_ts()} Sum of IDs from DB: {invoices_sum}")
+
+    if sum_of_ids_api != invoices_sum:
+        deleted = 0
+        print(
+            f"{log_ts()} The sum of IDs does not match. Identifying deleted invoices..."
+        )
+        cursor.execute(
+            """CREATE TABLE IF NOT EXISTS deleted_invoices (
+            id INT PRIMARY KEY,
+            customer_id INT,
+            customer_business_then_name VARCHAR(255),
+            number VARCHAR(255),
+            created_at DATETIME,
+            updated_at DATETIME,
+            date DATE,
+            due_date DATE,
+            subtotal FLOAT,
+            total FLOAT,
+            tax FLOAT,
+            verified_paid BOOLEAN,
+            tech_marked_paid BOOLEAN,
+            ticket_id INT,
+            user_id INT,
+            pdf_url VARCHAR(255),
+            is_paid BOOLEAN,
+            location_id INT,
+            po_number VARCHAR(255),
+            contact_id INT,
+            note TEXT,
+            hardwarecost FLOAT
+        )
+        """
+        )
+
+        # Get the set of IDs from the API data
+        api_ids = {item["id"] for item in data}
+
+        # Query all IDs from the invoices table
+        cursor.execute("SELECT id FROM invoices")
+        db_ids = cursor.fetchall()
+
+        # Check for IDs that are in the DB but not in the API data
+        for (db_id,) in db_ids:
+            if db_id not in api_ids:
+                print(
+                    f"{log_ts()} Moving invoice with ID {db_id}"
+                    " to deleted_invoices table..."
+                )
+
+                # Copy the row to the deleted_invoices table
+                cursor.execute(
+                    """INSERT INTO deleted_invoices SELECT
+                                * FROM invoices WHERE id = %s""",
+                    (db_id,),
+                )
+
+                # Delete the row from the invoices table
+                cursor.execute("DELETE FROM invoices WHERE id = %s", (db_id,))
+                deleted += 1
+                connection.commit()
+
+        print(
+            f"{log_ts()} Operation completed successfully. Deleted {deleted} invoices."
         )

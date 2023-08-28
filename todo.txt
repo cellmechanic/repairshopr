@@ -2,7 +2,7 @@
 # get the format correct for the api header,
 # put tickets update in cron
 # customers module to production / cron
-estimates module to production / cron
+# estimates module to production / cron
 invoices module to production / cron
 payments module to production / cron
 logging
