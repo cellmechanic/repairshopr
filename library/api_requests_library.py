@@ -1,7 +1,6 @@
 """api requests"""
-
-import requests
 from datetime import datetime, timedelta
+import requests
 from library import env_library
 from library.fix_date_time_library import log_ts
 
@@ -58,8 +57,8 @@ def get_customers(page):
 
 def get_invoice_lines(page):
     """api request for invoice line items"""
-    url = f"{env_library.api_url_invoice}?page={page}"
-    headers = {"Authorization": f"Bearer {env_library.api_key_invoice_lines}"}
+    url = f"{env_library.api_url_invoice_lines}?page={page}"
+    headers = {"Authorization": f"Bearer {env_library.api_key_invoice}"}
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code != 200:
@@ -101,7 +100,7 @@ def get_tickets(page=None, look_back_period=None):
         return None
 
 
-def get_invoices(page=None, look_back_period=None):
+def get_invoices(page=None, look_back_date=None):
     """API request for invoice data."""
 
     # base url / header key
@@ -112,8 +111,8 @@ def get_invoices(page=None, look_back_period=None):
     params = {}
     if page is not None:
         params["page"] = page
-    if look_back_period is not None:
-        params["since_updated_at"] = get_date_for_header(look_back_period)
+    if look_back_date is not None:
+        params["since_updated_at"] = look_back_date
 
     try:
         response = requests.get(url, headers=headers, params=params, timeout=10)
@@ -128,6 +127,7 @@ def get_invoices(page=None, look_back_period=None):
 
 
 def get_date_for_header(look_back):
+    """Get date for header"""
     date_before = datetime.now() - timedelta(days=look_back)
     formatted_date = date_before.strftime("%Y-%m-%d")
     print(f"{log_ts()} Looking back to {formatted_date}")
