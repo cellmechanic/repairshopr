@@ -57,6 +57,7 @@ def invoices(full_run=False, lookback_days=14):
 
         print(f"{log_ts()} Adding in : {total_pages}")
         print(f"{log_ts()} Number of entries to consider for DB: {len(all_data)}")
+        insert_invoices(cursor, all_data, last_run_timestamp_unix)
 
     if full_run:
         # Get 1st Page, then check to make sure not null
@@ -67,7 +68,7 @@ def invoices(full_run=False, lookback_days=14):
             print(f"{log_ts()} Error getting invoice data")
         print(f"{log_ts()} Total Pages: {total_pages}")
         # total_pages + 1
-        for page in range(1, 5):
+        for page in range(1, total_pages + 1):
             data = get_invoices(page)
             if data is not None:
                 all_data.extend(data["invoices"])
@@ -79,6 +80,7 @@ def invoices(full_run=False, lookback_days=14):
 
         print(f"{log_ts()} Adding in : {total_pages}")
         print(f"{log_ts()} Number of entries to consider for DB: {len(all_data)}")
+        insert_invoices(cursor, all_data, last_run_timestamp_unix)
 
         deleted = compare_id_sums(cursor, all_data, "invoices")
 
@@ -88,7 +90,7 @@ def invoices(full_run=False, lookback_days=14):
         else:
             print(f"{log_ts()} No deletes found in invoices, moving on...")
 
-    insert_invoices(cursor, all_data, last_run_timestamp_unix)
+ 
     connection.commit()
     connection.close()
 
