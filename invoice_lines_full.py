@@ -23,6 +23,7 @@ config = env_library.config
 CONNECTION = None
 cursor, CONNECTION = create_invoice_items_table_if_not_exists(config)
 
+
 # Fetch data from the env file for API
 headers = {"Authorization": f"Bearer {env_library.api_key_invoice}"}
 
@@ -54,6 +55,7 @@ for page in range(1, TOTAL_PAGES + 1):
     time.sleep(rate_limit())
 
 insert_invoice_lines(cursor, ALL_DATA, last_run_timestamp_unix)
+
 
 # Check ID sums to see if anything was deleted
 deleted = compare_id_sums(cursor, ALL_DATA, "invoice_items")

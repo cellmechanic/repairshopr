@@ -7,6 +7,7 @@ from library.fix_date_time_library import (
     format_date_fordb,
     log_ts,
 )
+from library.loki_library import start_loki
 
 
 def rate_limit():
@@ -23,18 +24,33 @@ def connect_to_db(config):
 
 def compare_id_sums(cursor, data, table_name):
     """compare the id sums to make sure they match"""
+    logger = start_loki("__compare_id_sums__")
     if table_name == "contacts":
         cursor.execute("SELECT SUM(id) FROM contacts")
         contacts_sum = cursor.fetchone()[0]
 
         sum_of_ids_api = sum(contact["id"] for contact in data)
-        print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
-        print(f"{log_ts()} Sum of IDs from DB: {contacts_sum}")
+        logger.info(
+            "Sum of IDs from API: %s",
+            sum_of_ids_api,
+            extra={"tags": {"service": "compare_id_sums"}},
+        )
+        logger.info(
+            "Sum of IDs from DB: %s",
+            contacts_sum,
+            extra={"tags": {"service": "compare_id_sums"}},
+        )
 
         if sum_of_ids_api == contacts_sum:
-            print(f"{log_ts()} Both ID sums are matching.")
+            logger.info(
+                "Both ID sums are matching",
+                extra={"tags": {"service": "compare_id_sums"}},
+            )
         else:
-            print(f"{log_ts()} The sum of IDs does not match.")
+            logger.warning(
+                "The sum of IDs does not match",
+                extra={"tags": {"service": "compare_id_sums"}},
+            )
 
         return sum_of_ids_api == contacts_sum
 
@@ -171,7 +187,7 @@ def create_customer_table_if_not_exists(cursor):
             phone VARCHAR(255),
             mobile VARCHAR(255),
             created_at DATETIME,
-            updated_at DATETIME,
+            updated_at DATETIME,            
             pdf_url TEXT,
             address VARCHAR(255),
             address_2 VARCHAR(255),
@@ -619,6 +635,7 @@ def insert_estimates(cursor, items, last_run_timestamp_unix):
 
 def insert_contacts(cursor, items, last_run_timestamp_unix):
     """Insert of update contacts based on the items provided."""
+    logger = start_loki("__insert_contacts__")
     added = 0
     updated = 0
     for item in items:
@@ -627,8 +644,10 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
         existing_record = cursor.fetchone()
         if existing_record:
             if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
-                print(
-                    f"{log_ts()} Contact {item['name']} has been updated since last run."
+                logger.info(
+                    "Contact %s has been updated since last run.",
+                    item["name"],
+                    extra={"tags": {"service": "insert_contacts", "updates": "yes"}},
                 )
                 updated += 1
                 sql = """
@@ -690,7 +709,11 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
                 )
 
                 cursor.execute(sql, values)
-                print(f"{log_ts()} All data received from {len(items)%25} page(s)")
+                logger.info(
+                    "All data received from %s page(s)",
+                    len(items) % 25,
+                    extra={"tags": {"service": "insert_contacts", "updates": "yes"}},
+                )
         else:
             added += 1
             sql = """
@@ -730,12 +753,14 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
                 item["ticket_matching_emails"],
             )
             cursor.execute(sql, values)
-    print(
-        f"{log_ts()} Added {added} new contacts, updated {updated} existing contacts."
+    logger.info(
+        "All data received from %s page(s)",
+        len(items) % 25,
+        extra={"tags": {"service": "insert_contacts", "updates": "yes"}},
     )
 
 
-def insert_customers(cursor, items, last_run_timestamp_unix):
+def insert_customers(cursor, items, last_run_timestamp_unix=0):
     """Insert or update customers based on the items provided."""
     added = 0
     updated = 0

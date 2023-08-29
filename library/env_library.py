@@ -17,6 +17,8 @@ api_url_customers = os.getenv("API_CUSTOMERS")
 api_key_estimates = os.getenv("API_ESTIMATES_KEY")
 api_url_estimates = os.getenv("API_ESTIMATES")
 
+loki_url = os.getenv("LOKI_URL")
+
 user = os.getenv("DB_USER")
 password = os.getenv("DB_PASSWORD")
 host = os.getenv("DB_HOST")

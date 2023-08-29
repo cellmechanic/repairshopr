@@ -1,5 +1,4 @@
 """Getting RS Contacts"""
-
 import time
 import library.env_library as env_library
 from library.fix_date_time_library import log_ts
@@ -15,11 +14,13 @@ from library.db_requests_library import (
     insert_contacts,
 )
 from library.timestamp_files import update_last_ran, check_last_ran
+from library.loki_library import start_loki
+
+logger = start_loki("__contacts__")
 
 # Load timestamp
 TIMESTAMP_FILE = "last_run_contacts.txt"
 last_run_timestamp_unix = check_last_ran(TIMESTAMP_FILE)
-print(f"{log_ts()} Last ran: {last_run_timestamp_unix}")
 
 # Database configurations
 config = env_library.config
@@ -37,27 +38,49 @@ TOTAL_ENTRIES = 0
 DB_ROWS = 0
 ALL_DATA = []
 
+
 # Get 1st Page, then check to make sure not null
 data = get_contacts(CURRENT_PAGE)
 if data is not None:
     TOTAL_PAGES = data["meta"]["total_pages"]
     TOTAL_ENTRIES = data["meta"]["total_entries"]
 else:
-    print(f"{log_ts()} Error getting contact data")
+    logger.error(
+        "%s Error getting contact data",
+        log_ts(),
+        extra={"tags": {"service": "contacts"}},
+    )
 
 # Iterate through all the pages
 for page in range(1, TOTAL_PAGES + 1):
     data = get_contacts(page)
     if data is not None:
         ALL_DATA.extend(data["contacts"])
-        print(f"{log_ts()} Added in page # {page}")
+        logger.info(
+            "Added in page # %s",
+            page,
+            extra={"tags": {"service": "contacts"}},
+        )
     else:
-        print(f"{log_ts()} Error getting tickets data")
+        logger.error(
+            "Error getting contact data",
+            extra={"tags": {"service": "contacts"}},
+        )
         break
     time.sleep(rate_limit())
 
-print(f"{log_ts()} Recieved all data, {TOTAL_PAGES} page(s)")
-print(f"{log_ts()} Total rows in ALL_DATA: {len(ALL_DATA)}")
+
+logger.info(
+    "Received all data, %s page(s)",
+    TOTAL_PAGES,
+    extra={"tags": {"service": "contacts"}},
+)
+
+logger.info(
+    "Total rows in ALL_DATA: %s",
+    len(ALL_DATA),
+    extra={"tags": {"service": "contacts"}},
+)
 
 # Check ID sums to see if anything was deleted
 deleted = compare_id_sums(cursor, ALL_DATA, "contacts")
@@ -75,12 +98,22 @@ if result is not None:
 
 # Check if the total entries match the expected count
 if DB_ROWS == TOTAL_ENTRIES:
-    print(f"{log_ts()} Meta Rows: {TOTAL_ENTRIES}.")
-    print(f"{log_ts()} Row Count from DB is: {DB_ROWS}")
+    logger.info(
+        "Meta Rows: %s",
+        TOTAL_ENTRIES,
+        extra={"tags": {"service": "contacts"}},
+    )
+    logger.info(
+        "Row Count from DB is: %s",
+        DB_ROWS,
+        extra={"tags": {"service": "contacts"}},
+    )
 else:
-    print(f"{log_ts()} ROW MISMATCH")
+    logger.error(
+        "Row Mismatch",
+        extra={"tags": {"service": "contacts"}},
+    )
 
 CONNECTION.commit()
 CONNECTION.close()
 update_last_ran(TIMESTAMP_FILE)
-print(f"{log_ts()} Database connection closed.")
