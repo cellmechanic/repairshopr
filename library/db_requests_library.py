@@ -754,8 +754,8 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
             )
             cursor.execute(sql, values)
     logger.info(
-        "All data received from %s page(s)",
-        len(items) % 25,
+        "Updated %s contacts, added %s new contacts",
+        updated, added,
         extra={"tags": {"service": "insert_contacts", "updates": "yes"}},
     )
 
