@@ -755,7 +755,8 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
             cursor.execute(sql, values)
     logger.info(
         "Updated %s contacts, added %s new contacts",
-        updated, added,
+        updated,
+        added,
         extra={"tags": {"service": "insert_contacts", "updates": "yes"}},
     )
 
@@ -1056,20 +1057,29 @@ def insert_invoices(cursor, items, last_run_timestamp_unix):
 def move_deleted_contacts_to_deleted_table(cursor, connection, data):
     """compare the id sums, and move any entries not
     in the data array to the deleted_contacts table"""
-
+    logger = start_loki("__move_deleted_contacts_to_deleted_table__")
     # Get the sum of the IDs from the database
     cursor.execute("SELECT SUM(id) FROM contacts")
     contacts_sum = cursor.fetchone()[0]
 
     # Get the sum of the IDs from the API data
     sum_of_ids_api = sum(contact["id"] for contact in data)
-    print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
-    print(f"{log_ts()} Sum of IDs from DB: {contacts_sum}")
+    logger.warning(
+        "Sum of IDs from API: %s",
+        sum_of_ids_api,
+        extra={"tags": {"service": "move_deleted_contacts_to_deleted_table"}},
+    )
+    logger.warning(
+        "Sum of IDs from DB: %s",
+        contacts_sum,
+        extra={"tags": {"service": "move_deleted_contacts_to_deleted_table"}},
+    )
 
     if sum_of_ids_api != contacts_sum:
         deleted = 0
-        print(
-            f"{log_ts()} The sum of IDs does not match. Identifying deleted contacts..."
+        logger.warning(
+            "The sum of IDs does not match. Identifying deleted contacts...",
+            extra={"tags": {"service": "move_deleted_contacts_to_deleted_table"}},
         )
 
         cursor.execute(
@@ -1112,8 +1122,15 @@ def move_deleted_contacts_to_deleted_table(cursor, connection, data):
         # Check for IDs that are in the DB but not in the API data
         for (db_id,) in db_ids:
             if db_id not in api_ids:
-                print(
-                    f"{log_ts()} Moving contact with ID {db_id} to deleted_contacts table..."
+                logger.info(
+                    "Moving contact with ID %s to deleted_contacts table...",
+                    db_id,
+                    extra={
+                        "tags": {
+                            "service": "move_deleted_contacts_to_deleted_table",
+                            "updates": "yes",
+                        }
+                    },
                 )
 
                 # Copy the row to the deleted_contacts table
@@ -1129,10 +1146,21 @@ def move_deleted_contacts_to_deleted_table(cursor, connection, data):
 
                 connection.commit()
 
-        print(f"{log_ts()} Operation completed successfully.")
-        print(f"{log_ts()} Deleted {deleted} contacts.")
+        logger.warning(
+            "Deleted %s contacts.",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_contacts_to_deleted_table",
+                    "updates": "yes",
+                }
+            },
+        )
     else:
-        print(f"{log_ts()} The sum of IDs matches.")
+        logger.info(
+            "The sum of IDs matches.",
+            extra={"tags": {"service": "move_deleted_contacts_to_deleted_table"}},
+        )
 
 
 def move_deleted_customers_to_deleted_table(cursor, connection, data):
