@@ -22,7 +22,7 @@ def contacts():
     logger = start_loki("__contacts__")
 
     # Load timestamp
-    timestamp_folder = "last runs"
+    timestamp_folder = "last-runs"
     timestamp_file = f"{timestamp_folder}/last_run_contacts.txt"
     last_run_timestamp_unix = check_last_ran(timestamp_file)
 

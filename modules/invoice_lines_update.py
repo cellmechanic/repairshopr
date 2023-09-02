@@ -21,7 +21,7 @@ def invoice_lines_update():
     logger = start_loki("__invoice_lines__")
 
     # Load timestamp
-    timestamp_folder = "last runs"
+    timestamp_folder = "last-runs"
     timestamp_file = f"{timestamp_folder}last_run_invoice_lines_updates.txt"
     last_run_timestamp_unix = check_last_ran(timestamp_file)
 
