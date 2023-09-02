@@ -14,7 +14,7 @@ from library.loki_library import start_loki
 from library.timestamp_files import check_last_ran, update_last_ran
 
 
-def ticket_days(lookback_days=60):
+def ticket_days(lookback_days):
     """main script for the ticket module"""
     logger = start_loki("__ticket_days__")
 
@@ -39,8 +39,7 @@ def ticket_days(lookback_days=60):
         total_pages = data["meta"]["total_pages"]
     else:
         logger.error(
-            "%s Error getting ticket data",
-            log_ts(),
+            "Error getting ticket data",
             extra={"tags": {"service": "tickets"}},
         )
 
@@ -87,11 +86,11 @@ def ticket_days(lookback_days=60):
     update_last_ran(timestamp_file)
 
 
-if len(sys.argv) > 1:
-    try:
-        DAYS = int(sys.argv[1])
-        ticket_days(DAYS)
-    except ValueError:
-        print(f"{log_ts()} Invalid Number of Days")
-else:
-    ticket_days()
+# if len(sys.argv) > 1:
+#     try:
+#         DAYS = int(sys.argv[1])
+#         ticket_days(DAYS)
+#     except ValueError:
+#         print(f"{log_ts()} Invalid Number of Days")
+# else:
+#     ticket_days()

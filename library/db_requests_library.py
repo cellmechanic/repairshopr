@@ -465,7 +465,6 @@ def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
         updated,
         extra={"tags": {"service": "invoice_lines", "finished": "yes"}},
     )
-    print("logger testing")
 
 
 def insert_tickets(cursor, items, last_run_timestamp_unix):
@@ -473,6 +472,7 @@ def insert_tickets(cursor, items, last_run_timestamp_unix):
     added = 0
     updated = 0
     logger = start_loki("__insert_tickets__")
+
     for item in items:
         # Check if the record exists and get the current updated_at value
         cursor.execute("SELECT updated_at FROM tickets WHERE id = %s", (item["id"],))
@@ -562,7 +562,6 @@ def insert_tickets(cursor, items, last_run_timestamp_unix):
             )
             cursor.execute(sql, values)
 
-    print(f"{log_ts()} Added {added} new tickets, updated {updated} existing tickets.")
     logger.info(
         "Added %s new tickets, updated %s existing tickets.",
         added,
@@ -778,9 +777,9 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
             )
             cursor.execute(sql, values)
     logger.info(
-        "Updated %s contacts, added %s new contacts",
-        updated,
+        "Added %s contacts, added updated %s existing contacts.",
         added,
+        updated,
         extra={"tags": {"service": "insert_contacts", "finished": "yes"}},
     )
 
@@ -907,6 +906,8 @@ def insert_comments(cursor, items, last_run_timestamp_unix):
     updated = 0
     comments_data = []
 
+    logger = start_loki("__insert_comments__")
+
     for item in items:
         comments_data.extend(item.get("comments", "[]"))
 
@@ -968,8 +969,11 @@ def insert_comments(cursor, items, last_run_timestamp_unix):
             )
             cursor.execute(sql, values)
 
-    print(
-        f"{log_ts()} Added {added} new comments, updated {updated} existing comments."
+    logger.info(
+        "Added %s new comments, updated %s existing comments.",
+        added,
+        updated,
+        extra={"tags": {"service": "insert_comments", "finished": "yes"}},
     )
     return comments_data
 

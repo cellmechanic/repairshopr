@@ -87,6 +87,7 @@ def get_invoice_lines(page):
 def get_tickets(page=None, look_back_period=None):
     """api request for ticket data"""
 
+    logger = start_loki("__get_tickets__")
     # base url / header key
     url = f"{env_library.api_url_tickets}"
     headers = {"Authorization": f"Bearer {env_library.api_key_tickets}"}
@@ -101,14 +102,22 @@ def get_tickets(page=None, look_back_period=None):
     try:
         response = requests.get(url, headers=headers, params=params, timeout=10)
         if response.status_code != 200:
-            print(
-                f"{log_ts()} Error fetching invoice line items on page {page}: {response.text}"
+            logger.error(
+                "Error fetching ticket data on page %s: %s",
+                page,
+                response.text,
+                extra={"tags": {"service": "tickets"}},
             )
             return None
         return response.json()
 
     except requests.RequestException as error:
-        print(f"{log_ts()} Failed to get data for page {page}: {str(error)}")
+        logger.error(
+            "Error fetching ticket data on page %s: %s",
+            page,
+            str(error),
+            extra={"tags": {"service": "tickets"}},
+        )
         return None
 
 
@@ -142,5 +151,4 @@ def get_date_for_header(look_back):
     """Get date for header"""
     date_before = datetime.now() - timedelta(days=look_back)
     formatted_date = date_before.strftime("%Y-%m-%d")
-    print(f"{log_ts()} Looking back to {formatted_date}")
     return formatted_date
