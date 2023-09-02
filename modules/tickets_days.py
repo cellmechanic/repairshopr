@@ -1,5 +1,4 @@
 """ticket with parameterized lookback"""
-import sys
 from library import env_library
 from library.api_requests_library import get_tickets
 from library.db_requests_library import (
@@ -9,7 +8,6 @@ from library.db_requests_library import (
     insert_tickets,
     insert_comments,
 )
-from library.fix_date_time_library import log_ts
 from library.loki_library import start_loki
 from library.timestamp_files import check_last_ran, update_last_ran
 
