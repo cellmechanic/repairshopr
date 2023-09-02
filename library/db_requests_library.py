@@ -361,6 +361,10 @@ def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
     """insert invoice lines"""
     added = 0
     updated = 0
+
+    logger = start_loki("__insert_invoice_lines__")
+    logger.propagate = False
+
     for item in items:
         # Check if the record exists and get the current updated_at value
         cursor.execute(
@@ -371,8 +375,10 @@ def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
         if existing_record:
             if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
                 # If record exists and updated_at is greater, update it
-                print(
-                    f"{log_ts()} Line item {item['id']} has been updated since last run."
+                logger.info(
+                    "Line item %s has been updated since last run.",
+                    item["id"],
+                    extra={"tags": {"service": "invoice_lines"}},
                 )
                 updated += 1
                 sql = """
@@ -416,7 +422,11 @@ def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
         else:
             # If record doesn't exist, insert it
             added += 1
-            print(f"{log_ts()} Inserting new line item {item['id']}.")
+            logger.info(
+                "Inserting new line item %s",
+                item["id"],
+                extra={"tags": {"service": "invoice_lines"}},
+            )
             sql = """
                 INSERT INTO invoice_items (
                     id, created_at, updated_at, invoice_id, item, name,
@@ -442,21 +452,31 @@ def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
                 item["discount_dollars"],
                 item["product_category"],
             )
-            print(f"{log_ts()} Inserting new line item with ID: {item['id']}.")
-            print(f"{log_ts()} Values tuple:", values)
+            logger.info(
+                "Inserting new line item with ID: %s",
+                item["id"],
+                extra={"tags": {"service": "invoice_lines", "finished": "yes"}},
+            )
             cursor.execute(sql, values)
-    print(f"{log_ts()} Added {added} new line items, updated {updated} line items.")
+
+    logger.info(
+        "Added %s new line items, updated %s existing line items.",
+        added,
+        updated,
+        extra={"tags": {"service": "invoice_lines", "finished": "yes"}},
+    )
+    print("logger testing")
 
 
 def insert_tickets(cursor, items, last_run_timestamp_unix):
     """Insert or update tickets based on the items provided."""
     added = 0
     updated = 0
+    logger = start_loki("__insert_tickets__")
     for item in items:
         # Check if the record exists and get the current updated_at value
         cursor.execute("SELECT updated_at FROM tickets WHERE id = %s", (item["id"],))
         existing_record = cursor.fetchone()
-        # print(f"{log_ts()} Processing ticket {item['number']}")
         if existing_record:
             if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
                 # If record exists and updated_at is greater, update it
@@ -540,11 +560,15 @@ def insert_tickets(cursor, items, last_run_timestamp_unix):
                 item["priority"],
                 json.dumps(item.get("comments", {})),
             )
-            # debug to print value tuples
-            # print(log_ts(), values)
             cursor.execute(sql, values)
 
     print(f"{log_ts()} Added {added} new tickets, updated {updated} existing tickets.")
+    logger.info(
+        "Added %s new tickets, updated %s existing tickets.",
+        added,
+        updated,
+        extra={"tags": {"service": "tickets", "finished": "yes"}},
+    )
 
 
 def insert_estimates(cursor, items, last_run_timestamp_unix):
@@ -647,7 +671,7 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
                 logger.info(
                     "Contact %s has been updated since last run.",
                     item["name"],
-                    extra={"tags": {"service": "insert_contacts", "updates": "yes"}},
+                    extra={"tags": {"service": "insert_contacts", "finished": "yes"}},
                 )
                 updated += 1
                 sql = """
@@ -712,7 +736,7 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
                 logger.info(
                     "All data received from %s page(s)",
                     len(items) % 25,
-                    extra={"tags": {"service": "insert_contacts", "updates": "yes"}},
+                    extra={"tags": {"service": "insert_contacts", "finished": "yes"}},
                 )
         else:
             added += 1
@@ -757,7 +781,7 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
         "Updated %s contacts, added %s new contacts",
         updated,
         added,
-        extra={"tags": {"service": "insert_contacts", "updates": "yes"}},
+        extra={"tags": {"service": "insert_contacts", "finished": "yes"}},
     )
 
 
@@ -1128,7 +1152,7 @@ def move_deleted_contacts_to_deleted_table(cursor, connection, data):
                     extra={
                         "tags": {
                             "service": "move_deleted_contacts_to_deleted_table",
-                            "updates": "yes",
+                            "finished": "yes",
                         }
                     },
                 )
@@ -1152,7 +1176,7 @@ def move_deleted_contacts_to_deleted_table(cursor, connection, data):
             extra={
                 "tags": {
                     "service": "move_deleted_contacts_to_deleted_table",
-                    "updates": "yes",
+                    "finished": "yes",
                 }
             },
         )

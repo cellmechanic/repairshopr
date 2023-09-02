@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import requests
 from library import env_library
 from library.fix_date_time_library import log_ts
+from library.loki_library import start_loki
 
 
 def get_contacts(page):
@@ -59,16 +60,27 @@ def get_invoice_lines(page):
     """api request for invoice line items"""
     url = f"{env_library.api_url_invoice_lines}?page={page}"
     headers = {"Authorization": f"Bearer {env_library.api_key_invoice}"}
+
+    logger = start_loki("__invoice_lines__")
+
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code != 200:
-            print(
-                f"{log_ts()} Error fetching invoice line items on page {page}: {response.text}"
+            logger.error(
+                "Error fetching invoice line items on page %s: %s",
+                page,
+                response.text,
+                extra={"tags": {"service": "invoice_lines"}},
             )
             return None
         return response.json()
     except requests.RequestException as error:
-        print(f"{log_ts()} Failed to get data for page {page}: {str(error)}")
+        logger.error(
+            "Error fetching invoice line items on page %s: %s",
+            page,
+            str(error),
+            extra={"tags": {"service": "invoice_lines"}},
+        )
         return None
 
 

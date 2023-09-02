@@ -1,7 +1,6 @@
 """getting RS invoice line items"""
 import time
 import library.env_library as env_library
-from library.fix_date_time_library import log_ts
 from library.db_requests_library import (
     create_invoice_items_table_if_not_exists,
     insert_invoice_lines,
@@ -22,7 +21,7 @@ def invoice_lines_update():
 
     # Load timestamp
     timestamp_folder = "last-runs"
-    timestamp_file = f"{timestamp_folder}last_run_invoice_lines_updates.txt"
+    timestamp_file = f"{timestamp_folder}/last_run_invoice_lines_updates.txt"
     last_run_timestamp_unix = check_last_ran(timestamp_file)
 
     # Database configurations
@@ -83,7 +82,6 @@ def invoice_lines_update():
         time.sleep(rate_limit())
 
     if not found_last_updated_row:
-        print(f"{log_ts()} No updates since last run")
         logger.info(
             "No invoice lines updated since last run",
             extra={"tags": {"service": "invoice_lines", "updates": "yes"}},
