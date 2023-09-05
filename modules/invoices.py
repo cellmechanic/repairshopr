@@ -15,7 +15,7 @@ from library.db_requests_library import (
     rate_limit,
 )
 from library.loki_library import start_loki
-from library.timestamp_files import check_last_ran
+from library.timestamp_files import check_last_ran, update_last_ran
 
 
 def invoices(full_run=False, lookback_days=14):
@@ -141,3 +141,4 @@ def invoices(full_run=False, lookback_days=14):
             )
     connection.commit()
     connection.close()
+    update_last_ran(timestamp_file)
