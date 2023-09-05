@@ -1,5 +1,6 @@
 """ main script for the frequent modules """
 from library.loki_library import start_loki
+from modules.customers import customers
 from modules.invoices import invoices
 from modules.estimates import estimates
 from modules.invoice_lines_update import invoice_lines_update
@@ -15,11 +16,12 @@ logger.info(
 )
 
 contacts()
+customers()
+estimates(False, 30)
 invoice_lines_update()
-ticket_days(10)
-estimates(False, 10)
 invoices()
 payments()
+ticket_days(30)
 
 logger.info(
     "----------END----------------",

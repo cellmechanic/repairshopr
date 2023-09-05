@@ -1,6 +1,5 @@
 """make timestamp files"""
 import time
-from library.fix_date_time_library import log_ts
 from library.loki_library import start_loki
 
 
@@ -12,8 +11,7 @@ def update_last_ran(timestamp_file):
             file.write(str(int(time.time())))
     except IOError as error:
         logger.error(
-            "%s Error updating timestamp: %s",
-            log_ts(),
+            "Error updating timestamp: %s",
             error,
             extra={"tags": {"service": "timestamp"}},
         )

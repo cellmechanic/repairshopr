@@ -14,12 +14,12 @@ def move_deleted_contacts_to_deleted_table(cursor, connection, data):
     # Get the sum of the IDs from the API data
     sum_of_ids_api = sum(contact["id"] for contact in data)
     logger.warning(
-        "Sum of IDs from API: %s",
+        "Sum of IDs from contacts API: %s",
         sum_of_ids_api,
         extra={"tags": {"service": "move_deleted_contacts_to_deleted_table"}},
     )
     logger.warning(
-        "Sum of IDs from DB: %s",
+        "Sum of IDs from contacts DB: %s",
         contacts_sum,
         extra={"tags": {"service": "move_deleted_contacts_to_deleted_table"}},
     )
@@ -107,7 +107,7 @@ def move_deleted_contacts_to_deleted_table(cursor, connection, data):
         )
     else:
         logger.info(
-            "The sum of IDs matches.",
+            "The sum of contact IDs matches.",
             extra={"tags": {"service": "move_deleted_contacts_to_deleted_table"}},
         )
 
@@ -116,19 +116,30 @@ def move_deleted_customers_to_deleted_table(cursor, connection, data):
     """compare the id sums, and move any entries not
     in the data array to the deleted_customers table"""
 
+    logger = start_loki("__move_deleted_customers_to_deleted_table__")
+
     # Get the sum of the IDs from the database
     cursor.execute("SELECT SUM(id) FROM customers")
     customers_sum = cursor.fetchone()[0]
 
     # Get the sum of the IDs from the API data
     sum_of_ids_api = sum(customer["id"] for customer in data)
-    print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
-    print(f"{log_ts()} Sum of IDs from DB: {customers_sum}")
+    logger.info(
+        "Sum of customer IDs from DB: %s",
+        customers_sum,
+        extra={"tags": {"service": "move_deleted_customers_to_deleted_table"}},
+    )
+    logger.info(
+        "Sum of customer IDs from API: %s",
+        sum_of_ids_api,
+        extra={"tags": {"service": "move_deleted_customers_to_deleted_table"}},
+    )
 
     if sum_of_ids_api != customers_sum:
         deleted = 0
-        print(
-            f"{log_ts()} The sum of IDs does not match. Identifying deleted customers..."
+        logger.warning(
+            "The sum of IDs does not match. Identifying deleted customers...",
+            extra={"tags": {"service": "move_deleted_customers_to_deleted_table"}},
         )
 
         cursor.execute(
@@ -183,8 +194,15 @@ def move_deleted_customers_to_deleted_table(cursor, connection, data):
         # Check for IDs that are in the DB but not in the API data
         for (db_id,) in db_ids:
             if db_id not in api_ids:
-                print(
-                    f"{log_ts()} Moving customer with ID {db_id} to deleted_customers table..."
+                logger.warning(
+                    "Moving customer with ID %s to deleted_customers table...",
+                    db_id,
+                    extra={
+                        "tags": {
+                            "service": "move_deleted_customers_to_deleted_table",
+                            "finished": "yes",
+                        }
+                    },
                 )
 
                 # Copy the row to the deleted_contacts table
@@ -200,15 +218,28 @@ def move_deleted_customers_to_deleted_table(cursor, connection, data):
 
                 connection.commit()
 
-        print(f"{log_ts()} Operation completed successfully.")
-        print(f"{log_ts()} Deleted {deleted} customers.")
+        logger.warning(
+            "Deleted %s customers.",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_customers_to_deleted_table",
+                    "finished": "yes",
+                }
+            },
+        )
     else:
-        print(f"{log_ts()} The sum of IDs matches.")
+        logger.info(
+            "The sum of customer IDs matches.",
+            extra={"tags": {"service": "move_deleted_customers_to_deleted_table"}},
+        )
 
 
 def move_deleted_lines_to_deleted_table(cursor, connection, data):
     """Compare the id sums, and move any entries not
     in the data array to the deleted_invoice_items table"""
+
+    logger = start_loki("__move_deleted_lines_to_deleted_table__")
 
     # Get the sum of the IDs from the database
     cursor.execute("SELECT SUM(id) FROM invoice_items")
@@ -216,13 +247,22 @@ def move_deleted_lines_to_deleted_table(cursor, connection, data):
 
     # Get the sum of the IDs from the API data
     sum_of_ids_api = sum(invoice_item["id"] for invoice_item in data)
-    print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
-    print(f"{log_ts()} Sum of IDs from DB: {line_items_sum}")
+    logger.info(
+        "Sum of line_items IDs from DB: %s",
+        line_items_sum,
+        extra={"tags": {"service": "move_deleted_lines_to_deleted_table"}},
+    )
+    logger.info(
+        "Sum of line_items IDs from API: %s",
+        sum_of_ids_api,
+        extra={"tags": {"service": "move_deleted_lines_to_deleted_table"}},
+    )
 
     if sum_of_ids_api != line_items_sum:
         deleted = 0
-        print(
-            f"{log_ts()} The sum of IDs does not match. Identifying deleted invoice items..."
+        logger.warning(
+            "The sum of IDs does not match. Identifying deleted invoice items...",
+            extra={"tags": {"service": "move_deleted_lines_to_deleted_table"}},
         )
         cursor.execute(
             """CREATE TABLE IF NOT EXISTS deleted_invoice_items (
@@ -256,11 +296,16 @@ def move_deleted_lines_to_deleted_table(cursor, connection, data):
         # Check for IDs that are in the DB but not in the API data
         for (db_id,) in db_ids:
             if db_id not in api_ids:
-                print(
-                    f"{log_ts()} Moving invoice item with ID {db_id}"
-                    "to deleted_invoice_items table..."
+                logger.warning(
+                    "Moving invoice item with ID %s to deleted_invoice_items table...",
+                    db_id,
+                    extra={
+                        "tags": {
+                            "service": "move_deleted_lines_to_deleted_table",
+                            "finished": "yes",
+                        }
+                    },
                 )
-
                 # Copy the row to the deleted_invoice_items table
                 cursor.execute(
                     """INSERT INTO deleted_invoice_items SELECT
@@ -273,15 +318,28 @@ def move_deleted_lines_to_deleted_table(cursor, connection, data):
                 deleted += 1
                 connection.commit()
 
-        print(f"{log_ts()} Operation completed successfully.")
-        print(f"{log_ts()} Deleted {deleted} invoice items.")
+        logger.warning(
+            "Deleted %s invoice items.",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_lines_to_deleted_table",
+                    "finished": "yes",
+                }
+            },
+        )
     else:
-        print(f"{log_ts()} The sum of IDs matches.")
+        logger.info(
+            "The sum of line_items IDs matches.",
+            extra={"tags": {"service": "move_deleted_lines_to_deleted_table"}},
+        )
 
 
 def move_deleted_tickets_to_deleted_table(cursor, connection, data):
     """Compare the id sums, and move any entries not
     in the data array to the deleted_tickets table"""
+
+    logger = start_loki("__move_deleted_tickets_to_deleted_table__")
 
     # Get the sum of the IDs from the database
     cursor.execute("SELECT SUM(id) FROM tickets")
@@ -289,13 +347,22 @@ def move_deleted_tickets_to_deleted_table(cursor, connection, data):
 
     # Get the sum of the IDs from the API data
     sum_of_ids_api = sum(ticket["id"] for ticket in data)
-    print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
-    print(f"{log_ts()} Sum of IDs from DB: {tickets_sum}")
+    logger.info(
+        "Sum of ticket IDs from DB: %s",
+        tickets_sum,
+        extra={"tags": {"service": "move_deleted_tickets_to_deleted_table"}},
+    )
+    logger.info(
+        "Sum of ticket IDs from API: %s",
+        sum_of_ids_api,
+        extra={"tags": {"service": "move_deleted_tickets_to_deleted_table"}},
+    )
 
     if sum_of_ids_api != tickets_sum:
         deleted = 0
-        print(
-            f"{log_ts()} The sum of IDs does not match. Identifying deleted tickets..."
+        logger.warning(
+            "The sum of IDs does not match. Identifying deleted tickets...",
+            extra={"tags": {"service": "move_deleted_tickets_to_deleted_table"}},
         )
         cursor.execute(
             """CREATE TABLE IF NOT EXISTS deleted_tickets (
@@ -333,12 +400,17 @@ def move_deleted_tickets_to_deleted_table(cursor, connection, data):
         # Check for IDs that are in the DB but not in the API data
         for (db_id,) in db_ids:
             if db_id not in api_ids:
-                print(
-                    f"{log_ts()} Moving ticket with ID {db_id}"
-                    " and it's comments to deleted_tickets table,"
-                    " and it's comments to deleted_comments table..."
+                logger.warning(
+                    "Moving ticket with ID %s to deleted_tickets table...,"
+                    " and it's comments to deleted_comments table...",
+                    db_id,
+                    extra={
+                        "tags": {
+                            "service": "move_deleted_tickets_to_deleted_table",
+                            "finished": "yes",
+                        }
+                    },
                 )
-
                 # Copy the row to the deleted_tickets table
                 # Assuming db_id is the ticket ID you're about to delete or move
                 cursor.execute(
@@ -346,8 +418,16 @@ def move_deleted_tickets_to_deleted_table(cursor, connection, data):
                     (db_id,),
                 )
                 affected_rows = cursor.rowcount
-                print(
-                    f"Moved {affected_rows} comments to deleted_comments for ticket_id {db_id}."
+                logger.warning(
+                    "Moved %s comments to deleted_comments for ticket_id %s.",
+                    affected_rows,
+                    db_id,
+                    extra={
+                        "tags": {
+                            "service": "move_deleted_tickets_to_deleted_table",
+                            "finished": "yes",
+                        }
+                    },
                 )
 
                 cursor.execute("DELETE FROM comments WHERE ticket_id = %s", (db_id,))
@@ -363,15 +443,28 @@ def move_deleted_tickets_to_deleted_table(cursor, connection, data):
                 deleted += 1
                 connection.commit()
 
-        print(f"{log_ts()} Operation completed successfully.")
-        print(f"{log_ts()} {deleted} tickets were deleted.")
+        logger.warning(
+            "Deleted %s tickets.",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_tickets_to_deleted_table",
+                    "finished": "yes",
+                }
+            },
+        )
     else:
-        print(f"{log_ts()} The sum of IDs matches.")
+        logger.info(
+            "The sum of ticket IDs matches.",
+            extra={"tags": {"service": "move_deleted_tickets_to_deleted_table"}},
+        )
 
 
 def move_deleted_comments_to_deleted_table(cursor, connection, data):
     """Compare the id sums, and move any entries not
     in the data array to the deleted_comments table"""
+
+    logger = start_loki("__move_deleted_comments_to_deleted_table__")
 
     # Get the sum of the IDs from the database
     cursor.execute("SELECT SUM(id) FROM comments")
@@ -379,13 +472,22 @@ def move_deleted_comments_to_deleted_table(cursor, connection, data):
 
     # Get the sum of the IDs from the API data
     sum_of_ids_api = sum(comment["id"] for comment in data)
-    print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
-    print(f"{log_ts()} Sum of IDs from DB: {comments_sum}")
+    logger.info(
+        "Sum of comment IDs from DB: %s",
+        comments_sum,
+        extra={"tags": {"service": "move_deleted_comments_to_deleted_table"}},
+    )
+    logger.info(
+        "Sum of comment IDs from API: %s",
+        sum_of_ids_api,
+        extra={"tags": {"service": "move_deleted_comments_to_deleted_table"}},
+    )
 
     if sum_of_ids_api != comments_sum:
         deleted = 0
-        print(
-            f"{log_ts()} The sum of IDs does not match. Identifying deleted comments..."
+        logger.warning(
+            "The sum of IDs does not match. Identifying deleted comments...",
+            extra={"tags": {"service": "move_deleted_comments_to_deleted_table"}},
         )
         cursor.execute(
             """CREATE TABLE IF NOT EXISTS deleted_comments (
@@ -422,32 +524,49 @@ def move_deleted_comments_to_deleted_table(cursor, connection, data):
         # Check for IDs that are in the DB but not in the API data
         for (db_id,) in db_ids:
             if db_id not in api_ids:
-                print(
-                    f"{log_ts()} Moving comment with ID {db_id}"
-                    " to deleted_comments table..."
+                logger.warning(
+                    "Moving comment with ID %s to deleted_comments table...",
+                    db_id,
+                    extra={
+                        "tags": {
+                            "service": "move_deleted_comments_to_deleted_table",
+                            "finished": "yes",
+                        }
+                    },
                 )
-
                 # Copy the row to the deleted_comments table
                 cursor.execute(
                     """INSERT INTO deleted_comments SELECT
                                 * FROM comments WHERE id = %s""",
                     (db_id,),
                 )
-
                 # Delete the row from the comments table
                 cursor.execute("DELETE FROM comments WHERE id = %s", (db_id,))
                 deleted += 1
                 connection.commit()
 
-        print(f"{log_ts()} Operation completed successfully.")
-        print(f"{log_ts()} {deleted} comments were deleted.")
+        logger.warning(
+            "Deleted %s comments.",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_comments_to_deleted_table",
+                    "finished": "yes",
+                }
+            },
+        )
     else:
-        print(f"{log_ts()} The sum of IDs matches.")
+        logger.info(
+            "The sum of comment IDs matches.",
+            extra={"tags": {"service": "move_deleted_comments_to_deleted_table"}},
+        )
 
 
 def move_deleted_estimates_to_deleted_table(cursor, connection, data):
     """Compare the id sums, and move any entries not
     in the data array to the deleted_estimates table"""
+
+    logger = start_loki("__move_deleted_estimates_to_deleted_table__")
 
     # Get the sum of the IDs from the database
     cursor.execute("SELECT SUM(id) FROM estimates")
@@ -455,13 +574,22 @@ def move_deleted_estimates_to_deleted_table(cursor, connection, data):
 
     # Get the sum of the IDs from the API data
     sum_of_ids_api = sum(item["id"] for item in data)
-    print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
-    print(f"{log_ts()} Sum of IDs from DB: {estimates_sum}")
+    logger.info(
+        "Sum of IDs from estimates DB: %s",
+        estimates_sum,
+        extra={"tags": {"service": "move_deleted_estimates_to_deleted_table"}},
+    )
+    logger.info(
+        "Sum of IDs from estimates API: %s",
+        sum_of_ids_api,
+        extra={"tags": {"service": "move_deleted_estimates_to_deleted_table"}},
+    )
 
     if sum_of_ids_api != estimates_sum:
         deleted = 0
-        print(
-            f"{log_ts()} The sum of IDs does not match. Identifying deleted estimates..."
+        logger.warning(
+            "The sum of IDs does not match. Identifying deleted estimates...",
+            extra={"tags": {"service": "move_deleted_estimates_to_deleted_table"}}, 
         )
         cursor.execute(
             """CREATE TABLE IF NOT EXISTS deleted_estimates (
@@ -512,8 +640,15 @@ def move_deleted_estimates_to_deleted_table(cursor, connection, data):
                 deleted += 1
                 connection.commit()
 
-        print(
-            f"{log_ts()} Operation completed successfully. Deleted {deleted} estimates."
+        logger.warning(
+            "Deleted %s estimates.",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_estimates_to_deleted_table",
+                    "finished": "yes",
+                }
+            },
         )
 
 
@@ -521,19 +656,30 @@ def move_deleted_invoices_to_deleted_table(cursor, connection, data):
     """Compare the id sums, and move any entries not
     in the data array to the deleted_invoices table"""
 
+    logger = start_loki("__move_deleted_invoices_to_deleted_table__")
+
     # Get the sum of the IDs from the database
     cursor.execute("SELECT SUM(id) FROM invoices")
     invoices_sum = cursor.fetchone()[0]
 
     # Get the sum of the IDs from the API data
     sum_of_ids_api = sum(item["id"] for item in data)
-    print(f"{log_ts()} Sum of IDs from API: {sum_of_ids_api}")
-    print(f"{log_ts()} Sum of IDs from DB: {invoices_sum}")
+    logger.info(
+        "Sum of IDs from invoices DB: %s",
+        invoices_sum,
+        extra={"tags": {"service": "move_deleted_invoices_to_deleted_table"}},
+    )
+    logger.info(
+        "Sum of IDs from invoices API: %s",
+        sum_of_ids_api,
+        extra={"tags": {"service": "move_deleted_invoices_to_deleted_table"}},
+    )
 
     if sum_of_ids_api != invoices_sum:
         deleted = 0
-        print(
-            f"{log_ts()} The sum of IDs does not match. Identifying deleted invoices..."
+        logger.warning(
+            "The sum of IDs does not match. Identifying deleted invoices...",
+            extra={"tags": {"service": "move_deleted_invoices_to_deleted_table"}},
         )
         cursor.execute(
             """CREATE TABLE IF NOT EXISTS deleted_invoices (
@@ -573,9 +719,15 @@ def move_deleted_invoices_to_deleted_table(cursor, connection, data):
         # Check for IDs that are in the DB but not in the API data
         for (db_id,) in db_ids:
             if db_id not in api_ids:
-                print(
-                    f"{log_ts()} Moving invoice with ID {db_id}"
-                    " to deleted_invoices table..."
+                logger.warning(
+                    "Moving invoice with ID %s to deleted_invoices table...",
+                    db_id,
+                    extra={
+                        "tags": {
+                            "service": "move_deleted_invoices_to_deleted_table",
+                            "finished": "yes",
+                        }
+                    },
                 )
 
                 # Copy the row to the deleted_invoices table
@@ -590,6 +742,13 @@ def move_deleted_invoices_to_deleted_table(cursor, connection, data):
                 deleted += 1
                 connection.commit()
 
-        print(
-            f"{log_ts()} Operation completed successfully. Deleted {deleted} invoices."
+        logger.warning(
+            "Deleted %s invoices.",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_invoices_to_deleted_table",
+                    "finished": "yes",
+                }
+            },
         )
