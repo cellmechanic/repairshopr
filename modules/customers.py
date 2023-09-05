@@ -1,12 +1,10 @@
+"""Customer backup module"""
 from library import env_library
 from library.api_requests_library import get_customers
-from library.db_requests_library import (
-    connect_to_db,
-    create_customer_table_if_not_exists,
-    compare_id_sums,
-    insert_customers,
-    move_deleted_customers_to_deleted_table,
-)
+from library.db_create import create_customer_table_if_not_exists
+from library.db_delete import move_deleted_customers_to_deleted_table
+from library.db_general import compare_id_sums, connect_to_db
+from library.db_insert import insert_customers
 from library.fix_date_time_library import log_ts
 from library.loki_library import start_loki
 from library.timestamp_files import check_last_ran, update_last_ran
@@ -17,65 +15,95 @@ def customers():
 
     logger = start_loki("__customers__")
 
-    TIMESTAMP_FILE = "last_run_customers.txt"
-    last_run_timestamp_unix = check_last_ran(TIMESTAMP_FILE)
-    print(f"{log_ts()} Last ran: {last_run_timestamp_unix}")
+    # Load timestamp
+    timestamp_folder = "last-runs"
+    timestamp_file = f"{timestamp_folder}/last_run_customers.txt"
+    last_run_timestamp_unix = check_last_ran(timestamp_file)
 
     # Database configurations
     config = env_library.config
-    cursor, CONNECTION = connect_to_db(config)
+    cursor, connection = connect_to_db(config)
     create_customer_table_if_not_exists(cursor)
 
     # Start fetching contacts from page 1
-    CURRENT_PAGE = 1
-    TOTAL_PAGES = 0
-    TOTAL_ENTRIES = 0
-    DB_ROWS = 0
-    ALL_DATA = []
+    current_page = 1
+    total_pages = 0
+    total_entries = 0
+    db_rows = 0
+    all_data = []
 
     # Get 1st Page, then check to make sure not null
-    data = get_customers(CURRENT_PAGE)
+    data = get_customers(current_page)
     if data is not None:
-        TOTAL_PAGES = data["meta"]["total_pages"]
-        TOTAL_ENTRIES = data["meta"]["total_entries"]
+        total_pages = data["meta"]["total_pages"]
+        total_entries = data["meta"]["total_entries"]
     else:
         print(f"{log_ts()} Error getting contact data")
+        logger.error(
+            "Error getting contact data",
+            extra={"tags": {"service": "contacts"}},
+        )
 
     # Iterate through all the pages
-    for page in range(1, TOTAL_PAGES + 1):
+    for page in range(1, total_pages + 1):
         data = get_customers(page)
         if data is not None:
-            ALL_DATA.extend(data["customers"])
-            print(f"{log_ts()} Added in page # {page}")
+            all_data.extend(data["customers"])
+            logger.info(
+                "Added in page # %s",
+                page,
+                extra={"tags": {"service": "contacts"}},
+            )
         else:
-            print(f"{log_ts()} Error getting tickets data")
+            logger.error(
+                "Error getting contact data",
+                extra={"tags": {"service": "contacts"}},
+            )
             break
 
-    print(f"{log_ts()} Received all data, {TOTAL_PAGES} page(s)")
-    print(f"{log_ts()} Total rows in ALL_DATA: {len(ALL_DATA)}")
+    logger.info(
+        "Received all data, %s page(s)",
+        total_pages,
+        extra={"tags": {"service": "contacts"}},
+    )
+    logger.info(
+        "Total rows in all_data: %s",
+        len(all_data),
+        extra={"tags": {"service": "contacts"}},
+    )
 
     # Check ID sums to see if anything was deleted
-    deleted = compare_id_sums(cursor, ALL_DATA, "customers")
+    deleted = compare_id_sums(cursor, all_data, "customers")
     if not deleted:
-        move_deleted_customers_to_deleted_table(cursor, CONNECTION, ALL_DATA)
+        move_deleted_customers_to_deleted_table(cursor, connection, all_data)
 
-    insert_customers(cursor, ALL_DATA, last_run_timestamp_unix)
+    insert_customers(cursor, all_data, last_run_timestamp_unix)
 
     # Validate data / totals
-    QUERY = "SELECT COUNT(*) FROM customers"
-    cursor.execute(QUERY)
+    query = "SELECT COUNT(*) FROM customers"
+    cursor.execute(query)
     result = cursor.fetchone()
     if result is not None:
-        DB_ROWS = result[0]
+        db_rows = result[0]
 
     # Check if the total entries match the expected count
-    if DB_ROWS == TOTAL_ENTRIES:
-        print(f"{log_ts()} Meta Rows: {TOTAL_ENTRIES}.")
-        print(f"{log_ts()} Row Count from DB is: {DB_ROWS}")
+    if db_rows == total_entries:
+        logger.info(
+            "Meta Rows: %s",
+            total_entries,
+            extra={"tags": {"service": "contacts"}},
+        )
+        logger.info(
+            "Row Count from DB is: %s",
+            db_rows,
+            extra={"tags": {"service": "contacts"}},
+        )
     else:
-        print(f"{log_ts()} ROW MISMATCH")
+        logger.error(
+            "ROW MISMATCH",
+            extra={"tags": {"service": "contacts"}},
+        )
 
-    CONNECTION.commit()
-    CONNECTION.close()
-    update_last_ran(TIMESTAMP_FILE)
-    print(f"{log_ts()} Database connection closed.")
+    connection.commit()
+    connection.close()
+    update_last_ran(timestamp_file)

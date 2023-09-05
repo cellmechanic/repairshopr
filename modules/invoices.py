@@ -6,14 +6,10 @@ from library.api_requests_library import (
     get_invoices,
     get_date_for_header,
 )
-from library.db_requests_library import (
-    compare_id_sums,
-    connect_to_db,
-    insert_invoices,
-    create_invoices_table_if_not_exists,
-    move_deleted_invoices_to_deleted_table,
-    rate_limit,
-)
+from library.db_create import create_invoices_table_if_not_exists
+from library.db_delete import move_deleted_invoices_to_deleted_table
+from library.db_general import compare_id_sums, connect_to_db, rate_limit
+from library.db_insert import insert_invoices
 from library.loki_library import start_loki
 from library.timestamp_files import check_last_ran, update_last_ran
 

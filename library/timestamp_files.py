@@ -41,7 +41,7 @@ def check_last_ran(timestamp_file):
                 logger.warning(
                     "No timestamp found, using 0 as time, assuming rebuild",
                     extra={"tags": {"service": "timestamp"}},
-                )   
+                )
                 return int(1)
     except FileNotFoundError:
         logger.warning(

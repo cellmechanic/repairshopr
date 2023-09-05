@@ -1,13 +1,12 @@
 """ticket with parameterized lookback"""
 from library import env_library
 from library.api_requests_library import get_tickets
-from library.db_requests_library import (
-    connect_to_db,
-    create_tickets_table_if_not_exists,
+from library.db_create import (
     create_comments_table_if_not_exists,
-    insert_tickets,
-    insert_comments,
+    create_tickets_table_if_not_exists,
 )
+from library.db_general import connect_to_db
+from library.db_insert import insert_comments, insert_tickets
 from library.loki_library import start_loki
 from library.timestamp_files import check_last_ran, update_last_ran
 

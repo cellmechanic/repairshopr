@@ -1,15 +1,13 @@
 """getting RS invoice line items"""
 import time
+from library.db_create import create_invoice_items_table_if_not_exists
+from library.db_general import connect_to_db, rate_limit
+from library.db_insert import insert_invoice_lines
 import library.env_library as env_library
-from library.db_requests_library import (
-    create_invoice_items_table_if_not_exists,
-    insert_invoice_lines,
-    rs_to_unix_timestamp,
-    rate_limit,
-)
 from library.api_requests_library import (
     get_invoice_lines,
 )
+from library.fix_date_time_library import rs_to_unix_timestamp
 from library.loki_library import start_loki
 from library.timestamp_files import update_last_ran, check_last_ran
 
@@ -26,8 +24,8 @@ def invoice_lines_update():
 
     # Database configurations
     config = env_library.config
-    connection = None
-    cursor, connection = create_invoice_items_table_if_not_exists(config)
+    cursor, connection = connect_to_db(config)
+    create_invoice_items_table_if_not_exists(cursor)
 
     # Start fetching line items from the end
     total_pages = 0

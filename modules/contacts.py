@@ -1,17 +1,13 @@
 """Getting RS Contacts"""
 import time
+from library.db_create import create_contact_table_if_not_exists
+from library.db_delete import move_deleted_contacts_to_deleted_table
+from library.db_general import compare_id_sums, connect_to_db, rate_limit
+from library.db_insert import insert_contacts
 import library.env_library as env_library
 from library.fix_date_time_library import log_ts
 from library.api_requests_library import (
     get_contacts,
-)
-from library.db_requests_library import (
-    create_contact_table_if_not_exists,
-    connect_to_db,
-    compare_id_sums,
-    move_deleted_contacts_to_deleted_table,
-    rate_limit,
-    insert_contacts,
 )
 from library.timestamp_files import update_last_ran, check_last_ran
 from library.loki_library import start_loki
@@ -28,7 +24,6 @@ def contacts():
 
     # Database configurations
     config = env_library.config
-    connection = None
     cursor, connection = connect_to_db(config)
     create_contact_table_if_not_exists(cursor)
 

@@ -4,6 +4,7 @@ from modules.invoices import invoices
 from modules.estimates import estimates
 from modules.invoice_lines_update import invoice_lines_update
 from modules.contacts import contacts
+from modules.payments import payments
 from modules.tickets_days import ticket_days
 
 logger = start_loki("__main_frequent__")
@@ -13,11 +14,12 @@ logger.info(
     extra={"tags": {"service": "main_frequent", "finished": "yes"}},
 )
 
-contacts()
-invoice_lines_update()
-ticket_days(10)
-estimates(False, 10)
-invoices()
+# contacts()
+# invoice_lines_update()
+# ticket_days(10)
+# estimates(False, 10)
+# invoices()
+payments()
 
 logger.info(
     "----------END----------------",

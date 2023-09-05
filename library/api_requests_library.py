@@ -21,7 +21,7 @@ def get_contacts(page):
         return None
 
 
-def get_estimates(page=None):
+def get_estimates(page):
     """api request for estimates"""
     logger = start_loki("__get_estimates__")
     url = f"{env_library.api_url_estimates}"
@@ -45,6 +45,34 @@ def get_estimates(page=None):
             page,
             str(error),
             extra={"tags": {"service": "estimates"}},
+        )
+        return None
+
+
+def get_payments(page):
+    """api request for payments"""
+    logger = start_loki("__get_payments__")
+    url = f"{env_library.api_url_payments}"
+    headers = {"Authorization": f"Bearer {env_library.api_key_payments}"}
+    param = {"page": page}
+
+    try:
+        response = requests.get(url, headers=headers, params=param, timeout=10)
+        if response.status_code != 200:
+            logger.error(
+                "Error fetching payments on page %s: %s",
+                page,
+                response.text,
+                extra={"tags": {"service": "payments"}},
+            )
+            return None
+        return response.json()
+    except requests.RequestException as error:
+        logger.error(
+            "Error fetching payments on page %s: %s",
+            page,
+            str(error),
+            extra={"tags": {"service": "payments"}},
         )
         return None
 
