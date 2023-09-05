@@ -828,3 +828,4 @@ def insert_invoices(cursor, items, last_run_timestamp_unix):
         updated,
         extra={"tags": {"service": "insert_invoices", "finished": "yes"}},
     )
+
