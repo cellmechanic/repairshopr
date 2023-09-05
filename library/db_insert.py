@@ -3,7 +3,6 @@ import json
 from library.fix_date_time_library import (
     rs_to_unix_timestamp,
     format_date_fordb,
-    log_ts,
 )
 from library.loki_library import start_loki
 
@@ -530,6 +529,9 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
 
 def insert_customers(cursor, items, last_run_timestamp_unix=0):
     """Insert or update customers based on the items provided."""
+
+    logger = start_loki("__insert_customers__")
+
     added = 0
     updated = 0
     for item in items:
@@ -538,9 +540,6 @@ def insert_customers(cursor, items, last_run_timestamp_unix=0):
         existing_record = cursor.fetchone()
         if existing_record:
             if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
-                print(
-                    f"{log_ts()} Customer {item['fullname']} has been updated since last run."
-                )
                 updated += 1
                 sql = """
                     UPDATE customers SET 
@@ -638,8 +637,11 @@ def insert_customers(cursor, items, last_run_timestamp_unix=0):
                 item["referred_by"],
             )
             cursor.execute(sql, values)
-    print(
-        f"{log_ts()} Added {added} new customers, updated {updated} existing customers."
+    logger.info(
+        "Added %s new customers, updated %s existing customers.",
+        added,
+        updated,
+        extra={"tags": {"service": "insert_customers", "finished": "yes"}},
     )
 
 
