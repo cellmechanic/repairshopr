@@ -6,7 +6,7 @@ from library.loki_library import start_loki
 
 def update_last_ran(timestamp_file):
     """update the last time the script ran file, pass in the file"""
-    logger = start_loki("__timestamp__")
+    logger = start_loki("__update_last_ran__")
     try:
         with open(timestamp_file, "w", encoding="utf-8") as file:
             file.write(str(int(time.time())))
@@ -21,7 +21,7 @@ def update_last_ran(timestamp_file):
 
 def check_last_ran(timestamp_file):
     """check the passed timestamp file to see the last time this ran"""
-    logger = start_loki("__timestamp__")
+    logger = start_loki("__check_last_ran__")
     try:
         with open(timestamp_file, "r", encoding="utf-8") as file:
             last_run_timestamp_str = file.read().strip()
