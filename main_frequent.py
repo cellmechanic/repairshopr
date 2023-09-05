@@ -14,11 +14,11 @@ logger.info(
     extra={"tags": {"service": "main_frequent", "finished": "yes"}},
 )
 
-# contacts()
-# invoice_lines_update()
-# ticket_days(10)
-# estimates(False, 10)
-# invoices()
+contacts()
+invoice_lines_update()
+ticket_days(10)
+estimates(False, 10)
+invoices()
 payments()
 
 logger.info(
