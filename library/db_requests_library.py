@@ -572,6 +572,7 @@ def insert_tickets(cursor, items, last_run_timestamp_unix):
 
 def insert_estimates(cursor, items, last_run_timestamp_unix):
     """Insert or update estimates based on the items provided."""
+    logger = start_loki("__insert_estimates__")
     added = 0
     updated = 0
     for item in items:
@@ -651,8 +652,11 @@ def insert_estimates(cursor, items, last_run_timestamp_unix):
             )
             cursor.execute(sql, values)
 
-    print(
-        f"{log_ts()} Added {added} new estimates, updated {updated} existing estimates."
+    logger.info(
+        "Added %s new estimates, updated %s existing estimates.",
+        added,
+        updated,
+        extra={"tags": {"service": "estimates", "finished": "yes"}},
     )
 
 

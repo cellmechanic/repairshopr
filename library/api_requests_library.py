@@ -23,7 +23,7 @@ def get_contacts(page):
 
 def get_estimates(page=None):
     """api request for estimates"""
-
+    logger = start_loki("__get_estimates__")
     url = f"{env_library.api_url_estimates}"
     headers = {"Authorization": f"Bearer {env_library.api_key_estimates}"}
     param = {"page": page}
@@ -31,13 +31,21 @@ def get_estimates(page=None):
     try:
         response = requests.get(url, headers=headers, params=param, timeout=10)
         if response.status_code != 200:
-            print(
-                f"{log_ts()} Error fetching estimates on page {page}: {response.text}"
+            logger.error(
+                "Error fetching estimates on page %s: %s",
+                page,
+                response.text,
+                extra={"tags": {"service": "estimates"}},
             )
             return None
         return response.json()
     except requests.RequestException as error:
-        print(f"{log_ts()} Failed to get data for page {page}: {str(error)}")
+        logger.error(
+            "Error fetching estimates on page %s: %s",
+            page,
+            str(error),
+            extra={"tags": {"service": "estimates"}},
+        )
         return None
 
 
