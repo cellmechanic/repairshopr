@@ -984,6 +984,7 @@ def insert_comments(cursor, items, last_run_timestamp_unix):
 
 def insert_invoices(cursor, items, last_run_timestamp_unix):
     """Insert or update invoices based on the items provided."""
+    logger = start_loki("__insert_invoices__")
     added = 0
     updated = 0
     for item in items:
@@ -1081,8 +1082,11 @@ def insert_invoices(cursor, items, last_run_timestamp_unix):
             )
             cursor.execute(sql, values)
 
-    print(
-        f"{log_ts()} Added {added} new invoices, updated {updated} existing invoices."
+    logger.info(
+        "Added %s new invoices, updated %s existing invoices.",
+        added,
+        updated,
+        extra={"tags": {"service": "insert_invoices", "finished": "yes"}},
     )
 
 

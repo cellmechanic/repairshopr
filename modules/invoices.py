@@ -1,5 +1,4 @@
 """ getting invoices """
-import sys
 import time
 
 from library import env_library
@@ -15,12 +14,15 @@ from library.db_requests_library import (
     move_deleted_invoices_to_deleted_table,
     rate_limit,
 )
-from library.fix_date_time_library import log_ts
+from library.loki_library import start_loki
 from library.timestamp_files import check_last_ran
 
 
 def invoices(full_run=False, lookback_days=14):
     """Get invoices from the API and insert into the database"""
+
+    logger = start_loki("__invoices__")
+
     # Database configurations
     config = env_library.config
     cursor, connection = connect_to_db(config)
@@ -32,7 +34,8 @@ def invoices(full_run=False, lookback_days=14):
     all_data = []
 
     # Load timestamp
-    timestamp_file = "last_run_invoices.txt"
+    timestamp_folder = "last-runs"
+    timestamp_file = f"{timestamp_folder}/last_run_invoices.txt"
     last_run_timestamp_unix = check_last_ran(timestamp_file)
 
     if not full_run:
@@ -42,21 +45,40 @@ def invoices(full_run=False, lookback_days=14):
         if data is not None:
             total_pages = data["meta"]["total_pages"]
         else:
-            print(f"{log_ts()} Error getting invoice data")
+            logger.error(
+                "Error getting invoice data",
+                extra={"tags": {"service": "invoices"}},
+            )
 
         # total_pages + 1
         for page in range(1, total_pages + 1):
             data = get_invoices(page, lookback_date)
             if data is not None:
                 all_data.extend(data["invoices"])
-                print(f"{log_ts()} Added in page # {page}")
+                logger.info(
+                    "Added in page # %s",
+                    page,
+                    extra={"tags": {"service": "invoices"}},
+                )
             else:
-                print(f"{log_ts()} Error getting invoice data")
+                logger.error(
+                    "Error getting invoice data",
+                    extra={"tags": {"service": "invoices"}},
+                )
                 break
             # time.sleep(rate_limit())
 
-        print(f"{log_ts()} Adding in : {total_pages}")
-        print(f"{log_ts()} Number of entries to consider for DB: {len(all_data)}")
+        logger.info(
+            "Adding in : %s",
+            total_pages,
+            extra={"tags": {"service": "invoices"}},
+        )
+
+        logger.info(
+            "Number of entries to consider for DB: %s",
+            len(all_data),
+            extra={"tags": {"service": "invoices"}},
+        )
         insert_invoices(cursor, all_data, last_run_timestamp_unix)
 
     if full_run:
@@ -65,43 +87,57 @@ def invoices(full_run=False, lookback_days=14):
         if data is not None:
             total_pages = data["meta"]["total_pages"]
         else:
-            print(f"{log_ts()} Error getting invoice data")
-        print(f"{log_ts()} Total Pages: {total_pages}")
+            logger.error(
+                "Error getting invoice data",
+                extra={"tags": {"service": "invoices"}},
+            )
+        logger.info(
+            "Total Pages: %s",
+            total_pages,
+            extra={"tags": {"service": "invoices"}},
+        )
         # total_pages + 1
         for page in range(1, total_pages + 1):
             data = get_invoices(page)
             if data is not None:
                 all_data.extend(data["invoices"])
-                print(f"{log_ts()} Added in page # {page}")
+                logger.info(
+                    "Added in page # %s",
+                    page,
+                    extra={"tags": {"service": "invoices"}},
+                )
             else:
-                print(f"{log_ts()} Error getting invoice data")
+                logger.error(
+                    "Error getting invoice data",
+                    extra={"tags": {"service": "invoices"}},
+                )
                 break
             time.sleep(rate_limit())
 
-        print(f"{log_ts()} Adding in : {total_pages}")
-        print(f"{log_ts()} Number of entries to consider for DB: {len(all_data)}")
+        logger.info(
+            "Number of entries to consider for DB: %s",
+            len(all_data),
+            extra={"tags": {"service": "invoices"}},
+        )
+        logger.info(
+            "Number of entries to consider for DB: %s",
+            len(all_data),
+            extra={"tags": {"service": "invoices"}},
+        )
         insert_invoices(cursor, all_data, last_run_timestamp_unix)
 
         deleted = compare_id_sums(cursor, all_data, "invoices")
 
         if not deleted:
-            print(f"{log_ts()} There is an id mismatch, we need to look for deletes")
+            logger.warning(
+                "There is an id mismatch, we need to look for deletes",
+                extra={"tags": {"service": "invoices"}},
+            )
             move_deleted_invoices_to_deleted_table(cursor, connection, all_data)
         else:
-            print(f"{log_ts()} No deletes found in invoices, moving on...")
-
+            logger.info(
+                "No deletes found in invoices, moving on...",
+                extra={"tags": {"service": "invoices"}},
+            )
     connection.commit()
     connection.close()
-
-
-if len(sys.argv) > 1:
-    ARG = sys.argv[1]
-    if ARG == "full":
-        invoices(True)
-    elif ARG.isdigit() and int(ARG) > 0:  # Ensure it's a positive number
-        DAYS_TO_LOOK_BACK = int(ARG)
-        invoices(False, DAYS_TO_LOOK_BACK)
-    else:
-        print(f"{log_ts()} Invalid Response")
-else:
-    invoices(False)
