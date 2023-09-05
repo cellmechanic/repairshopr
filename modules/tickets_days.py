@@ -16,7 +16,8 @@ def ticket_days(lookback_days):
     logger = start_loki("__ticket_days__")
 
     # Load timestamp
-    timestamp_file = "last_run_tickets_days.txt"
+    timestamp_folder = "last-runs"
+    timestamp_file = f"{timestamp_folder}/last_run_tickets_days.txt"
     last_run_timestamp_unix = check_last_ran(timestamp_file)
 
     # Database configurations
