@@ -4,7 +4,6 @@ from library.db_hash import compute_hash
 from library.fix_date_time_library import (
     rs_to_unix_timestamp,
     format_date_fordb,
-    log_ts,
 )
 from library.loki_library import start_loki
 
@@ -107,7 +106,7 @@ def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
             logger.info(
                 "Inserting new line item with ID: %s",
                 item["id"],
-                extra={"tags": {"service": "invoice_lines", "finished": "yes"}},
+                extra={"tags": {"service": "invoice_lines"}},
             )
             cursor.execute(sql, values)
 
@@ -522,7 +521,7 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
             )
             cursor.execute(sql, values)
     logger.info(
-        "Added %s contacts, added updated %s existing contacts.",
+        "Added %s new contacts, updated %s existing contacts.",
         added,
         updated,
         extra={"tags": {"service": "insert_contacts", "finished": "yes"}},
@@ -539,9 +538,6 @@ def insert_customers(cursor, items, last_run_timestamp_unix=0):
         existing_record = cursor.fetchone()
         if existing_record:
             if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
-                print(
-                    f"{log_ts()} Customer {item['fullname']} has been updated since last run."
-                )
                 updated += 1
                 sql = """
                     UPDATE customers SET 
@@ -639,9 +635,6 @@ def insert_customers(cursor, items, last_run_timestamp_unix=0):
                 item["referred_by"],
             )
             cursor.execute(sql, values)
-    print(
-        f"{log_ts()} Added {added} new customers, updated {updated} existing customers."
-    )
 
 
 def insert_comments(cursor, items, last_run_timestamp_unix):

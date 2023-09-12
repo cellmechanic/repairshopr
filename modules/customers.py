@@ -5,7 +5,6 @@ from library.db_create import create_customer_table_if_not_exists
 from library.db_delete import move_deleted_customers_to_deleted_table
 from library.db_general import compare_id_sums, connect_to_db
 from library.db_insert import insert_customers
-from library.fix_date_time_library import log_ts
 from library.loki_library import start_loki
 from library.timestamp_files import check_last_ran, update_last_ran
 
@@ -38,7 +37,6 @@ def customers():
         total_pages = data["meta"]["total_pages"]
         total_entries = data["meta"]["total_entries"]
     else:
-        print(f"{log_ts()} Error getting contact data")
         logger.error(
             "Error getting contact data",
             extra={"tags": {"service": "contacts"}},

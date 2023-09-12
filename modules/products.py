@@ -68,12 +68,12 @@ def products():
         extra={"tags": {"service": "products"}},
     )
 
+    insert_products(cursor, all_data)
+
     # Check ID sums to see if anything was deleted
     deleted = compare_id_sums(cursor, all_data, "products")
     if not deleted:
         move_deleted_products_to_deleted_table(cursor, connection, all_data)
-
-    insert_products(cursor, all_data)
 
     # Validate data / totals
     query = "SELECT COUNT(*) FROM products"
