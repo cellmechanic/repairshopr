@@ -18,6 +18,8 @@ api_key_estimates = os.getenv("API_ESTIMATES_KEY")
 api_url_estimates = os.getenv("API_ESTIMATES")
 api_key_payments = os.getenv("API_PAYMENTS_KEY")
 api_url_payments = os.getenv("API_PAYMENTS")
+api_key_products = os.getenv("API_PRODUCTS_KEY")
+api_url_products = os.getenv("API_PRODUCTS")
 
 loki_url = os.getenv("LOKI_URL")
 

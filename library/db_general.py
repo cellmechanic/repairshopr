@@ -240,3 +240,32 @@ def compare_id_sums(cursor, data, table_name):
             )
 
         return sum_of_ids_api == payments_sum
+
+    if table_name == "products":
+        cursor.execute("SELECT SUM(id) FROM products")
+        products_sum = cursor.fetchone()[0]
+
+        sum_of_ids_api = sum(product["id"] for product in data)
+        logger.info(
+            "Sum of IDs from products table in DB: %s",
+            products_sum,
+            extra={"tags": {"service": "compare_id_sums"}},
+        )
+        logger.info(
+            "Sum of IDs from products API: %s",
+            sum_of_ids_api,
+            extra={"tags": {"service": "compare_id_sums"}},
+        )
+
+        if sum_of_ids_api == products_sum:
+            logger.info(
+                "Both ID sums are matching for products",
+                extra={"tags": {"service": "compare_id_sums"}},
+            )
+        else:
+            logger.warning(
+                "The sum of IDs does not match for products",
+                extra={"tags": {"service": "compare_id_sums"}},
+            )
+
+        return sum_of_ids_api == products_sum

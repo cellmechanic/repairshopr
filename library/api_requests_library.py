@@ -183,6 +183,34 @@ def get_invoices(page=None, look_back_date=None):
         return None
 
 
+def get_products(page=None):
+    """api request for products"""
+    logger = start_loki("__get_products__")
+    url = f"{env_library.api_url_products}"
+    headers = {"Authorization": f"Bearer {env_library.api_key_products}"}
+    param = {"page": page}
+
+    try:
+        response = requests.get(url, headers=headers, params=param, timeout=10)
+        if response.status_code != 200:
+            logger.error(
+                "Error fetching products on page %s: %s",
+                page,
+                response.text,
+                extra={"tags": {"service": "products"}},
+            )
+            return None
+        return response.json()
+    except requests.RequestException as error:
+        logger.error(
+            "Error fetching products on page %s: %s",
+            page,
+            str(error),
+            extra={"tags": {"service": "products"}},
+        )
+        return None
+
+
 def get_date_for_header(look_back):
     """Get date for header"""
     date_before = datetime.now() - timedelta(days=look_back)
