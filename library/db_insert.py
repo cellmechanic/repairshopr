@@ -106,7 +106,7 @@ def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
             logger.info(
                 "Inserting new line item with ID: %s",
                 item["id"],
-                extra={"tags": {"service": "invoice_lines", "finished": "yes"}},
+                extra={"tags": {"service": "invoice_lines"}},
             )
             cursor.execute(sql, values)
 
@@ -521,7 +521,7 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
             )
             cursor.execute(sql, values)
     logger.info(
-        "Added %s contacts, added updated %s existing contacts.",
+        "Added %s new contacts, updated %s existing contacts.",
         added,
         updated,
         extra={"tags": {"service": "insert_contacts", "finished": "yes"}},
