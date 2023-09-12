@@ -5,7 +5,6 @@ from library.db_delete import move_deleted_contacts_to_deleted_table
 from library.db_general import compare_id_sums, connect_to_db, rate_limit
 from library.db_insert import insert_contacts
 import library.env_library as env_library
-from library.fix_date_time_library import log_ts
 from library.api_requests_library import (
     get_contacts,
 )
@@ -41,8 +40,7 @@ def contacts():
         total_entries = data["meta"]["total_entries"]
     else:
         logger.error(
-            "%s Error getting contact data",
-            log_ts(),
+            "Error getting contact data",
             extra={"tags": {"service": "contacts"}},
         )
 

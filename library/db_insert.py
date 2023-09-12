@@ -1,5 +1,6 @@
 """DB insert functions"""
 import json
+from library.db_hash import compute_hash
 from library.fix_date_time_library import (
     rs_to_unix_timestamp,
     format_date_fordb,
@@ -829,3 +830,141 @@ def insert_invoices(cursor, items, last_run_timestamp_unix):
         extra={"tags": {"service": "insert_invoices", "finished": "yes"}},
     )
 
+
+def insert_products(cursor, items):
+    """Insert or update products based on the items provided."""
+    logger = start_loki("__insert_products__")
+    added = 0
+    updated = 0
+    for item in items:
+        # Hash current item
+        current_hash = compute_hash(item)
+
+        # Check existing record, hash, compare
+        cursor.execute("SELECT hash FROM products WHERE id = %s", (item["id"],))
+        existing_record = cursor.fetchone()
+
+        if existing_record:
+            if existing_record[0] != current_hash:
+                # If record exists and has a different hash, update
+                updated += 1
+                sql = """
+                        UPDATE products SET
+                            price_cost = %s,
+                            price_retail = %s,
+                            `condition` = %s,
+                            description = %s,
+                            maintain_stock = %s,
+                            name = %s,
+                            quantity = %s,
+                            warranty = %s,
+                            sort_order = %s,
+                            reorder_at = %s,
+                            disabled = %s,
+                            taxable = %s,
+                            product_category = %s,
+                            category_path = %s,
+                            upc_code = %s,
+                            discount_percent = %s,
+                            warranty_template_id = %s,
+                            qb_item_id = %s,
+                            desired_stock_level = %s,
+                            price_wholesale = %s,
+                            notes = %s,
+                            tax_rate_id = %s,
+                            physical_location = %s,
+                            serialized = %s,
+                            vendor_ids = %s,
+                            long_description = %s,
+                            location_quantities = %s,
+                            photos = %s,
+                            hash = %s
+                        WHERE id = %s
+                    """
+                values = (
+                    item["price_cost"],
+                    item["price_retail"],
+                    item.get(
+                        "condition", ""
+                    ),  # Using get() for optional fields to provide a default
+                    item["description"],
+                    item["maintain_stock"],
+                    item["name"],
+                    item["quantity"],
+                    item.get("warranty", None),
+                    item.get("sort_order", None),
+                    item.get("reorder_at", None),
+                    item["disabled"],
+                    item["taxable"],
+                    item["product_category"],
+                    item["category_path"],
+                    item.get("upc_code", ""),
+                    item.get("discount_percent", None),
+                    item.get("warranty_template_id", None),
+                    item.get("qb_item_id", None),
+                    item.get("desired_stock_level", None),
+                    item["price_wholesale"],
+                    item.get("notes", ""),
+                    item.get("tax_rate_id", None),
+                    item.get("physical_location", ""),
+                    item["serialized"],
+                    json.dumps(item["vendor_ids"]),  # Convert list to JSON string
+                    item.get("long_description", ""),
+                    json.dumps(item["location_quantities"]),  # Convert list to JSON string
+                    json.dumps(item["photos"]),  # Convert list to JSON string
+                    current_hash,
+                    item["id"],
+                )
+                cursor.execute(sql, values)
+        else:
+            # If record doesn't exist, insert it
+            added += 1
+            sql = """
+                INSERT INTO products (
+                    id, price_cost, price_retail, `condition`, description, maintain_stock, 
+                    name, quantity, warranty, sort_order, reorder_at, disabled, taxable, 
+                    product_category, category_path, upc_code, discount_percent, warranty_template_id, 
+                    qb_item_id, desired_stock_level, price_wholesale, notes, tax_rate_id, 
+                    physical_location, serialized, vendor_ids, long_description, location_quantities, photos, hash
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            values = (
+                item["id"],
+                item["price_cost"],
+                item["price_retail"],
+                item.get("condition", ""),
+                item["description"],
+                item["maintain_stock"],
+                item["name"],
+                item["quantity"],
+                item.get("warranty", None),
+                item.get("sort_order", None),
+                item.get("reorder_at", None),
+                item["disabled"],
+                item["taxable"],
+                item["product_category"],
+                item["category_path"],
+                item.get("upc_code", ""),
+                item.get("discount_percent", None),
+                item.get("warranty_template_id", None),
+                item.get("qb_item_id", None),
+                item.get("desired_stock_level", None),
+                item["price_wholesale"],
+                item.get("notes", ""),
+                item.get("tax_rate_id", None),
+                item.get("physical_location", ""),
+                item["serialized"],
+                json.dumps(item["vendor_ids"]),
+                item.get("long_description", ""),
+                json.dumps(item["location_quantities"]),
+                json.dumps(item["photos"]),
+                current_hash,
+            )
+            cursor.execute(sql, values)
+
+    logger.info(
+        "Added %s new products, updated %s existing products.",
+        added,
+        updated,
+        extra={"tags": {"service": "insert_products", "finished": "yes"}},
+    )

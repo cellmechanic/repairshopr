@@ -589,7 +589,7 @@ def move_deleted_estimates_to_deleted_table(cursor, connection, data):
         deleted = 0
         logger.warning(
             "The sum of IDs does not match. Identifying deleted estimates...",
-            extra={"tags": {"service": "move_deleted_estimates_to_deleted_table"}}, 
+            extra={"tags": {"service": "move_deleted_estimates_to_deleted_table"}},
         )
         cursor.execute(
             """CREATE TABLE IF NOT EXISTS deleted_estimates (
@@ -751,4 +751,120 @@ def move_deleted_invoices_to_deleted_table(cursor, connection, data):
                     "finished": "yes",
                 }
             },
+        )
+
+
+def move_deleted_products_to_deleted_table(cursor, connection, data):
+    """Compare the id sums, and move any entries not
+    in the data array to the deleted_products table."""
+    logger = start_loki("__move_deleted_products_to_deleted_table__")
+
+    # Get the sum of the IDs from the database
+    cursor.execute("SELECT SUM(id) FROM products")
+    products_sum = cursor.fetchone()[0]
+
+    # Get the sum of the IDs from the API data
+    sum_of_ids_api = sum(product["id"] for product in data)
+    logger.warning(
+        "Sum of IDs from products API: %s",
+        sum_of_ids_api,
+        extra={"tags": {"service": "move_deleted_products_to_deleted_table"}},
+    )
+    logger.warning(
+        "Sum of IDs from products DB: %s",
+        products_sum,
+        extra={"tags": {"service": "move_deleted_products_to_deleted_table"}},
+    )
+
+    if sum_of_ids_api != products_sum:
+        deleted = 0
+        logger.warning(
+            "The sum of IDs does not match. Identifying deleted products...",
+            extra={"tags": {"service": "move_deleted_products_to_deleted_table"}},
+        )
+
+        cursor.execute(
+            """CREATE TABLE IF NOT EXISTS deleted_products (
+                id INT PRIMARY KEY,
+                price_cost FLOAT,
+                price_retail FLOAT,
+                `condition` VARCHAR(255),
+                description TEXT,
+                maintain_stock BOOLEAN,
+                name VARCHAR(255),
+                quantity INT,
+                warranty TEXT,
+                sort_order INT,
+                reorder_at INT,
+                disabled BOOLEAN,
+                taxable BOOLEAN,
+                product_category VARCHAR(255),
+                category_path VARCHAR(255),
+                upc_code VARCHAR(255),
+                discount_percent FLOAT,
+                warranty_template_id INT,
+                qb_item_id INT,
+                desired_stock_level INT,
+                price_wholesale FLOAT,
+                notes TEXT,
+                tax_rate_id INT,
+                physical_location TEXT,
+                serialized BOOLEAN,
+                vendor_ids JSON,
+                long_description TEXT,
+                location_quantities JSON,
+                photos JSON,
+                hash VARCHAR(32)
+            )
+            """
+        )
+
+        # Get the set of IDs from the API data
+        api_ids = {product["id"] for product in data}
+
+        # Query all IDs from the products table
+        cursor.execute("SELECT id FROM products")
+        db_ids = cursor.fetchall()
+
+        # Check for IDs that are in the DB but not in the API data
+        for (db_id,) in db_ids:
+            if db_id not in api_ids:
+                logger.info(
+                    "Moving product with ID %s to deleted_products table...",
+                    db_id,
+                    extra={
+                        "tags": {
+                            "service": "move_deleted_products_to_deleted_table",
+                            "finished": "yes",
+                        }
+                    },
+                )
+
+                # Copy the row to the deleted_products table
+                cursor.execute(
+                    """INSERT INTO deleted_products SELECT
+                                * FROM products WHERE id = %s""",
+                    (db_id,),
+                )
+
+                # Delete the row from the products table
+                cursor.execute("DELETE FROM products WHERE id = %s", (db_id,))
+                deleted += 1
+
+                connection.commit()
+
+        logger.warning(
+            "Deleted %s products.",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_products_to_deleted_table",
+                    "finished": "yes",
+                }
+            },
+        )
+    else:
+        logger.info(
+            "The sum of product IDs matches.",
+            extra={"tags": {"service": "move_deleted_products_to_deleted_table"}},
         )

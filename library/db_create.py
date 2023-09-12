@@ -234,3 +234,42 @@ def create_payments_table_if_not_exists(cursor):
         )
         """
     )
+
+def create_products_table_if_not_exists(cursor):
+    """Create the products db table if it doesn't already exist"""
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS products (
+            id INT PRIMARY KEY,
+            price_cost FLOAT,
+            price_retail FLOAT,
+            `condition` VARCHAR(255),
+            description TEXT,
+            maintain_stock BOOLEAN,
+            name VARCHAR(255),
+            quantity INT,
+            warranty TEXT,
+            sort_order INT,
+            reorder_at INT,
+            disabled BOOLEAN,
+            taxable BOOLEAN,
+            product_category VARCHAR(255),
+            category_path VARCHAR(255),
+            upc_code VARCHAR(255),
+            discount_percent FLOAT,
+            warranty_template_id INT,
+            qb_item_id INT,
+            desired_stock_level INT,
+            price_wholesale FLOAT,
+            notes TEXT,
+            tax_rate_id INT,
+            physical_location TEXT,
+            serialized BOOLEAN,
+            vendor_ids JSON,
+            long_description TEXT,
+            location_quantities JSON,
+            photos JSON,
+            hash VARCHAR(32)
+        )
+        """
+    )
