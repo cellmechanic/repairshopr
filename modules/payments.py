@@ -43,20 +43,18 @@ def payments(full_run=False, lookback_days=14):
 
         lookback_date_formatted = get_date_for_header(lookback_days)
         found_page = 0
+        found_older = False
 
         for page in range(1, total_pages + 1):
+            if found_older:
+                break
             data = get_payments(page)
             if data is not None and "payments" in data:
                 found_older = any(
                     item["created_at"] < lookback_date_formatted
                     for item in data["payments"]
                 )
-                if found_older:
-                    logger.info(
-                        "Found older than %s days",
-                        lookback_days,
-                        extra={"tags": {"service": "payments"}},
-                    )
+                if not found_older:
                     break
 
                 all_data.extend(data["payments"])
@@ -84,7 +82,7 @@ def payments(full_run=False, lookback_days=14):
                 extra={"tags": {"service": "payments"}},
             )
 
-            insert_payments(cursor, all_data, last_run_timestamp_unix)
+        insert_payments(cursor, all_data, last_run_timestamp_unix)
 
     if full_run:
         data = get_payments(current_page)
