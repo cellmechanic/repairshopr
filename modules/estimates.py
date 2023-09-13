@@ -97,7 +97,7 @@ def estimates(full_run=False, lookback_days=365):
                 extra={"tags": {"service": "estimates"}},
             )
 
-        for page in range(1, 10):
+        for page in range(1, total_pages + 1):
             data = get_estimates(page)
             if data is not None:
                 all_data.extend(data["estimates"])
