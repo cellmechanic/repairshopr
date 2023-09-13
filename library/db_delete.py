@@ -683,6 +683,16 @@ def move_deleted_estimates_to_deleted_table(cursor, connection, data):
                         }
                     },
                 )
+                logger.info(
+                    "Moving estimate with ID %s to deleted_estimates table...",
+                    db_id,
+                    extra={
+                        "tags": {
+                            "service": "move_deleted_estimates_to_deleted_table",
+                            "finished": "yes",
+                        }
+                    },
+                )
 
                 # Copy the row to the deleted_estimates table
                 cursor.execute(

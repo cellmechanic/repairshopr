@@ -149,7 +149,7 @@ def estimates(full_run=False, lookback_days=365):
             )
         else:
             logger.error(
-                "Estimate Meta Rows: %s, DB Rows: %s",
+                "Estimate API Rows: %s, DB Rows: %s",
                 len(all_data),
                 db_rows,
                 extra={"tags": {"service": "estimates"}},

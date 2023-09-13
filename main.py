@@ -8,7 +8,7 @@ from modules.invoice_lines import invoice_lines
 from modules.contacts import contacts
 from modules.payments import payments
 from modules.products import products
-from modules.tickets_days import ticket_days
+from modules.tickets import tickets
 
 
 def main():
@@ -39,7 +39,7 @@ def main():
         invoice_lines()
         invoices(False, 14)
         payments(False, 14)
-        ticket_days(14)
+        tickets(False, 14)
         products()  # Always does a full run, small data set
 
         logger.info(
@@ -61,6 +61,7 @@ def main():
         invoice_lines(True)
         invoices(True, 0)
         payments(True, 0)
+        tickets(True, 0)
         products()
 
         logger.info(
