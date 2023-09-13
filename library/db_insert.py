@@ -530,8 +530,6 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
 def insert_customers(cursor, items, last_run_timestamp_unix):
     """Insert or update customers based on the items provided."""
 
-    logger = start_loki("__insert_customers__")
-
     added = 0
     updated = 0
     logger = start_loki("__insert_customers__")
@@ -644,13 +642,6 @@ def insert_customers(cursor, items, last_run_timestamp_unix):
         updated,
         extra={"tags": {"service": "insert_customers", "finished": "yes"}},
     )
-
-    logger.info(
-            "Added %s new customers, updated %s existing customers.",
-            added,
-            updated,
-            extra={"tags": {"service": "insert_customers", "finished": "yes"}},
-        )
 
 
 def insert_comments(cursor, items, last_run_timestamp_unix):

@@ -62,7 +62,7 @@ def main():
         invoices(True, 0)
         payments(True, 0)
         products()
-        
+
         logger.info(
             "---------END FULL RUN---------------",
             extra={"tags": {"service": "main_full", "finished": "full"}},
