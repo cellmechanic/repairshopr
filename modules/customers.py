@@ -90,7 +90,7 @@ def customers():
     # Check if the total entries match the expected count
     if db_rows == total_entries:
         logger.info(
-            "All Good -- Customer Meta Rows: %s, DB Rows: %s",
+            "All Good -- Customer API Rows: %s, DB Rows: %s",
             total_entries,
             db_rows,
             extra={"tags": {"service": "contacts", "finished": "full"}},

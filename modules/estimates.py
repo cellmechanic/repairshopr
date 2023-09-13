@@ -45,7 +45,7 @@ def estimates(full_run=False, lookback_days=365):
         lookback_date_formatted = get_date_for_header(lookback_days)
         found_page = 0
 
-        for page in range(1, total_pages + 1):
+        for page in range(1, 10):
             data = get_estimates(page)
             if data is not None and "estimates" in data:
                 found_older = any(
@@ -142,7 +142,7 @@ def estimates(full_run=False, lookback_days=365):
         # Check if the total entries match the expected count
         if db_rows == len(all_data):
             logger.info(
-                "All Good -- Estimate Meta Rows: %s, DB Rows: %s",
+                "All Good -- Estimate API Rows: %s, DB Rows: %s",
                 len(all_data),
                 db_rows,
                 extra={"tags": {"service": "estimates", "finished": "full"}},

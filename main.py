@@ -55,12 +55,14 @@ def main():
             extra={"tags": {"service": "main_full", "finished": "full"}},
         )
 
-        # contacts()
-        # customers()
-        # estimates(True, 0)
-        # payments(True, 0)
-        # invoice_lines(True)
-
+        contacts()
+        customers()
+        estimates(True, 0)
+        invoice_lines(True)
+        invoices(True, 0)
+        payments(True, 0)
+        products()
+        
         logger.info(
             "---------END FULL RUN---------------",
             extra={"tags": {"service": "main_full", "finished": "full"}},

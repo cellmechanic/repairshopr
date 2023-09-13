@@ -62,7 +62,7 @@ def invoices(full_run=False, lookback_days=14):
                     extra={"tags": {"service": "invoices"}},
                 )
                 break
-            # time.sleep(rate_limit())
+            time.sleep(rate_limit())
 
         logger.info(
             "Adding in : %s",
@@ -93,7 +93,7 @@ def invoices(full_run=False, lookback_days=14):
             extra={"tags": {"service": "invoices"}},
         )
         # total_pages + 1
-        for page in range(1, total_pages + 1):
+        for page in range(1, 10):
             data = get_invoices(page)
             if data is not None:
                 all_data.extend(data["invoices"])
@@ -125,16 +125,26 @@ def invoices(full_run=False, lookback_days=14):
         deleted = compare_id_sums(cursor, all_data, "invoices")
 
         if not deleted:
-            logger.warning(
-                "There is an id mismatch, we need to look for deletes",
-                extra={"tags": {"service": "invoices"}},
-            )
             move_deleted_invoices_to_deleted_table(cursor, connection, all_data)
+
+        # Validate data / totals
+        query = "SELECT COUNT(*) FROM invoices"
+        cursor.execute(query)
+        result = cursor.fetchone()
+        if result is not None:
+            db_rows = result[0]
         else:
+            db_rows = 0
+
+        # Check if the total entries match the expected count
+        if db_rows == len(all_data):
             logger.info(
-                "No deletes found in invoices, moving on...",
+                "All Good -- Invoice API Rows: %s, DB Rows: %s",
+                len(all_data),
+                db_rows,
                 extra={"tags": {"service": "invoices"}},
             )
+
     connection.commit()
     connection.close()
     update_last_ran(timestamp_file)

@@ -104,7 +104,7 @@ def invoice_lines(full_run=False):
                 extra={"tags": {"service": "invoice_lines"}},
             )
 
-        for page in range(1, total_pages + 1):
+        for page in range(1, 10):
             data = get_invoice_lines(page)
             if data is not None:
                 all_data.extend(data["line_items"])
@@ -151,10 +151,10 @@ def invoice_lines(full_run=False):
         # Check if the total entries match the expected count
         if db_rows == len(all_data):
             logger.info(
-                "All Good -- Invoice Line Items: %s, DB Rows %s",
+                "All Good -- Invoice Line API Rows: %s, DB Rows %s",
                 len(all_data),
                 db_rows,
-                extra={"tags": {"service": "invoice_lines"}},
+                extra={"tags": {"service": "invoice_lines", "finished": "full"}},
             )
 
     connection.commit()

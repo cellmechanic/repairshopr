@@ -95,7 +95,7 @@ def payments(full_run=False, lookback_days=14):
                 extra={"tags": {"service": "payments"}},
             )
 
-        for page in range(1, total_pages + 1):
+        for page in range(1, 10):
             data = get_payments(page)
             if data is not None:
                 all_data.extend(data["payments"])
@@ -137,17 +137,17 @@ def payments(full_run=False, lookback_days=14):
             db_rows = 0
 
         # Check if the total entries match the expected count
-        if db_rows == total_pages:
+        if db_rows == len(all_data):
             logger.info(
-                "All Good -- Payment Meta Rows: %s, DB Rows: %s",
-                total_pages,
+                "All Good -- Payment API Rows: %s, DB Rows: %s",
+                len(all_data),
                 db_rows,
-                extra={"tags": {"service": "payments"}},
+                extra={"tags": {"service": "payments", "finished": "full"}},
             )
         else:
             logger.error(
                 "Data mismatch -- Payment Meta Rows: %s, DB Rows: %s",
-                total_pages,
+                len(all_data),
                 db_rows,
                 extra={"tags": {"service": "payments"}},
             )
