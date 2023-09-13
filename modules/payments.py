@@ -4,6 +4,7 @@ import time
 from library import env_library
 from library.api_requests_library import get_date_for_header, get_payments
 from library.db_create import create_payments_table_if_not_exists
+from library.db_delete import move_deleted_payments_to_deleted_table
 from library.db_general import compare_id_sums, connect_to_db, rate_limit
 from library.db_insert import insert_payments
 from library.loki_library import start_loki
@@ -123,8 +124,33 @@ def payments(full_run=False, lookback_days=14):
         insert_payments(cursor, all_data, last_run_timestamp_unix)
 
         deleted = compare_id_sums(cursor, all_data, "payments")
-        # if not deleted:
-        # move_deleted_payments_to_deleted_table(cursor, connection, all_data)
+        if not deleted:
+            move_deleted_payments_to_deleted_table(cursor, connection, all_data)
+        
+        # Validate data / totals
+        query = "SELECT COUNT(*) FROM payments"
+        cursor.execute(query)
+        result = cursor.fetchone()
+        if result is not None:
+            db_rows = result[0]
+        else:
+            db_rows = 0
+
+        # Check if the total entries match the expected count
+        if db_rows == total_pages:
+            logger.info(
+                "All Good -- Payment Meta Rows: %s, DB Rows: %s",
+                total_pages,
+                db_rows,
+                extra={"tags": {"service": "payments"}},
+            )
+        else:
+            logger.error(
+                "Data mismatch -- Payment Meta Rows: %s, DB Rows: %s",
+                total_pages,
+                db_rows,
+                extra={"tags": {"service": "payments"}},
+            )
 
     connection.commit()
     connection.close()

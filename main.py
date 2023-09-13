@@ -4,7 +4,7 @@ from library.loki_library import start_loki
 from modules.customers import customers
 from modules.invoices import invoices
 from modules.estimates import estimates
-from modules.invoice_lines_update import invoice_lines_update
+from modules.invoice_lines import invoice_lines
 from modules.contacts import contacts
 from modules.payments import payments
 from modules.products import products
@@ -35,8 +35,8 @@ def main():
 
         contacts()  # Always does full run, small data set
         customers()  # Always does a full run, small data set
-        estimates(False, 0)
-        invoice_lines_update()
+        estimates(False, 14)
+        invoice_lines()
         invoices(False, 14)
         payments(False, 14)
         ticket_days(14)
@@ -52,10 +52,20 @@ def main():
 
         logger.info(
             "---------START FULL RUN---------------",
-            extra={"tags": {"service": "main_full", "finished": "yes"}},
+            extra={"tags": {"service": "main_full", "finished": "full"}},
         )
 
-        contacts()
+        # contacts()
+        # customers()
+        # estimates(True, 0)
+        # payments(True, 0)
+        # invoice_lines(True)
+
+        logger.info(
+            "---------END FULL RUN---------------",
+            extra={"tags": {"service": "main_full", "finished": "full"}},
+        )
+
 
 if __name__ == "__main__":
     main()

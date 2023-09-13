@@ -1,11 +1,12 @@
 """ticket with parameterized lookback"""
+import time
 from library import env_library
 from library.api_requests_library import get_tickets
 from library.db_create import (
     create_comments_table_if_not_exists,
     create_tickets_table_if_not_exists,
 )
-from library.db_general import connect_to_db
+from library.db_general import connect_to_db, rate_limit
 from library.db_insert import insert_comments, insert_tickets
 from library.loki_library import start_loki
 from library.timestamp_files import check_last_ran, update_last_ran
@@ -63,7 +64,7 @@ def ticket_days(lookback_days):
                 extra={"tags": {"service": "tickets"}},
             )
             break
-        # time.sleep(rate_limit())
+        time.sleep(rate_limit())
 
     logger.info(
         "Total tickets: %s",
@@ -83,12 +84,3 @@ def ticket_days(lookback_days):
     connection.close()
     update_last_ran(timestamp_file)
 
-
-# if len(sys.argv) > 1:
-#     try:
-#         DAYS = int(sys.argv[1])
-#         ticket_days(DAYS)
-#     except ValueError:
-#         print(f"{log_ts()} Invalid Number of Days")
-# else:
-#     ticket_days()
