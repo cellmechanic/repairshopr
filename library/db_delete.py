@@ -1,7 +1,6 @@
 #! /usr/bin/env python # pylint: disable=C0302
 """DB delete functions"""
 from library.loki_library import start_loki
-from library.fix_date_time_library import log_ts
 
 
 def move_deleted_contacts_to_deleted_table(cursor, connection, data):
@@ -674,9 +673,15 @@ def move_deleted_estimates_to_deleted_table(cursor, connection, data):
         # Check for IDs that are in the DB but not in the API data
         for (db_id,) in db_ids:
             if db_id not in api_ids:
-                print(
-                    f"{log_ts()} Moving estimate with ID {db_id}"
-                    " to deleted_estimates table..."
+                logger.info(
+                    "Moving estimate with ID %s to deleted_estimates table...",
+                    db_id,
+                    extra={
+                        "tags": {
+                            "service": "move_deleted_estimates_to_deleted_table",
+                            "finished": "yes",
+                        }
+                    },
                 )
 
                 # Copy the row to the deleted_estimates table

@@ -23,7 +23,3 @@ def get_timestamp_code():
     """return the correct timestamp code to stay uniform"""
     return "%Y-%m-%dT%H:%M:%S.%f%z"
 
-
-def log_ts():
-    """return a formatted string for a log with readable timestamp"""
-    return "[" + datetime.now().strftime("%H:%M:%S%z %m-%d-%Y") + "]"
