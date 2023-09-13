@@ -2,7 +2,6 @@
 from datetime import datetime, timedelta
 import requests
 from library import env_library
-from library.fix_date_time_library import log_ts
 from library.loki_library import start_loki
 
 
@@ -10,14 +9,27 @@ def get_contacts(page):
     """api request for contacts"""
     url = f"{env_library.api_url_contact}?page={page}"
     headers = {"Authorization": f"Bearer {env_library.api_key_contact}"}
+
+    logger = start_loki("__get_contacts__")
+
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code != 200:
-            print(f"{log_ts()} Error fetching contacts on page {page}: {response.text}")
+            logger.error(
+                "Error fetching contacts on page %s: %s",
+                page,
+                response.text,
+                extra={"tags": {"service": "contacts"}},
+            )
             return None
         return response.json()
     except requests.RequestException as error:
-        print(f"{log_ts()} Failed to get data for page {page}: {str(error)}")
+        logger.error(
+            "Error fetching contacts on page %s: %s",
+            page,
+            str(error),
+            extra={"tags": {"service": "contacts"}},
+        )
         return None
 
 
@@ -52,6 +64,7 @@ def get_estimates(page):
 def get_payments(page):
     """api request for payments"""
     logger = start_loki("__get_payments__")
+
     url = f"{env_library.api_url_payments}"
     headers = {"Authorization": f"Bearer {env_library.api_key_payments}"}
     param = {"page": page}
@@ -81,14 +94,27 @@ def get_customers(page):
     """api request for customers"""
     url = f"{env_library.api_url_customers}?page={page}"
     headers = {"Authorization": f"Bearer {env_library.api_key_customers}"}
+
+    logger = start_loki("__get_customers__")
+
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code != 200:
-            print(f"{log_ts()} Error fetching contacts on page {page}: {response.text}")
+            logger.error(
+                "Error fetching customers on page %s: %s",
+                page,
+                response.text,
+                extra={"tags": {"service": "customers"}},
+            )
             return None
         return response.json()
     except requests.RequestException as error:
-        print(f"{log_ts()} Failed to get data for page {page}: {str(error)}")
+        logger.error(
+            "Error fetching customers on page %s: %s",
+            page,
+            str(error),
+            extra={"tags": {"service": "customers"}},
+        )
         return None
 
 
@@ -159,11 +185,11 @@ def get_tickets(page=None, look_back_period=None):
 
 def get_invoices(page=None, look_back_date=None):
     """API request for invoice data."""
-
     # base url / header key
     url = f"{env_library.api_url_invoice}"
     headers = {"Authorization": f"Bearer {env_library.api_key_invoice}"}
 
+    logger = start_loki("__get_invoices__")
     # params
     params = {}
     if page is not None:
@@ -174,18 +200,29 @@ def get_invoices(page=None, look_back_date=None):
     try:
         response = requests.get(url, headers=headers, params=params, timeout=10)
         if response.status_code != 200:
-            print(f"{log_ts()} Error fetching invoices on page {page}: {response.text}")
+            logger.error(
+                "Error fetching invoices on page %s: %s",
+                page,
+                response.text,
+                extra={"tags": {"service": "invoices"}},
+            )
             return None
         return response.json()
 
     except requests.RequestException as error:
-        print(f"{log_ts()} Failed to get invoice data for page {page}: {str(error)}")
+        logger.error(
+            "Error fetching invoices on page %s: %s",
+            page,
+            str(error),
+            extra={"tags": {"service": "invoices"}},
+        )
         return None
 
 
 def get_products(page=None):
     """api request for products"""
     logger = start_loki("__get_products__")
+
     url = f"{env_library.api_url_products}"
     headers = {"Authorization": f"Bearer {env_library.api_key_products}"}
     param = {"page": page}
