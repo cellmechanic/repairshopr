@@ -45,7 +45,7 @@ def estimates(full_run=False, lookback_days=365):
         lookback_date_formatted = get_date_for_header(lookback_days)
         found_page = 0
 
-        for page in range(1, 10):
+        for page in range(1, total_pages + 1):
             data = get_estimates(page)
             if data is not None and "estimates" in data:
                 found_older = any(

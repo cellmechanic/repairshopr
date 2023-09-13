@@ -93,7 +93,7 @@ def invoices(full_run=False, lookback_days=14):
             extra={"tags": {"service": "invoices"}},
         )
         # total_pages + 1
-        for page in range(1, 10):
+        for page in range(1, total_pages + 1):
             data = get_invoices(page)
             if data is not None:
                 all_data.extend(data["invoices"])

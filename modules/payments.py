@@ -95,7 +95,7 @@ def payments(full_run=False, lookback_days=14):
                 extra={"tags": {"service": "payments"}},
             )
 
-        for page in range(1, 10):
+        for page in range(1, total_pages + 1):
             data = get_payments(page)
             if data is not None:
                 all_data.extend(data["payments"])

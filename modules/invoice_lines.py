@@ -104,7 +104,7 @@ def invoice_lines(full_run=False):
                 extra={"tags": {"service": "invoice_lines"}},
             )
 
-        for page in range(1, 10):
+        for page in range(1, total_pages + 1):
             data = get_invoice_lines(page)
             if data is not None:
                 all_data.extend(data["line_items"])
