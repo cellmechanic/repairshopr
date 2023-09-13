@@ -97,7 +97,7 @@ def estimates(full_run=False, lookback_days=365):
                 extra={"tags": {"service": "estimates"}},
             )
 
-        for page in range(1, total_pages + 1):
+        for page in range(1, 10):
             data = get_estimates(page)
             if data is not None:
                 all_data.extend(data["estimates"])
@@ -122,18 +122,36 @@ def estimates(full_run=False, lookback_days=365):
             len(all_data),
             extra={"tags": {"service": "estimates"}},
         )
+
         insert_estimates(cursor, all_data, last_run_timestamp_unix)
 
         deleted = compare_id_sums(cursor, all_data, "estimates")
+
         if not deleted:
-            logger.warning(
-                "There is an id mismatch, we need to look for deletes",
-                extra={"tags": {"service": "estimates"}},
-            )
             move_deleted_estimates_to_deleted_table(cursor, connection, all_data)
+
+        # Validate data / totals
+        query = "SELECT COUNT(*) FROM estimates"
+        cursor.execute(query)
+        result = cursor.fetchone()
+        if result is not None:
+            db_rows = result[0]
         else:
+            db_rows = 0
+
+        # Check if the total entries match the expected count
+        if db_rows == len(all_data):
             logger.info(
-                "No deletes found in estimates, moving on...",
+                "All Good -- Estimate Meta Rows: %s, DB Rows: %s",
+                len(all_data),
+                db_rows,
+                extra={"tags": {"service": "estimates", "finished": "full"}},
+            )
+        else:
+            logger.error(
+                "Estimate Meta Rows: %s, DB Rows: %s",
+                len(all_data),
+                db_rows,
                 extra={"tags": {"service": "estimates"}},
             )
 

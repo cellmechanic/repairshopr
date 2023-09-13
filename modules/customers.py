@@ -70,12 +70,13 @@ def customers():
         extra={"tags": {"service": "contacts"}},
     )
 
+    insert_customers(cursor, all_data, last_run_timestamp_unix)
+
     # Check ID sums to see if anything was deleted
     deleted = compare_id_sums(cursor, all_data, "customers")
+
     if not deleted:
         move_deleted_customers_to_deleted_table(cursor, connection, all_data)
-
-    insert_customers(cursor, all_data, last_run_timestamp_unix)
 
     # Validate data / totals
     query = "SELECT COUNT(*) FROM customers"
@@ -87,18 +88,14 @@ def customers():
     # Check if the total entries match the expected count
     if db_rows == total_entries:
         logger.info(
-            "Meta Rows: %s",
+            "All Good -- Customer Meta Rows: %s, DB Rows: %s",
             total_entries,
-            extra={"tags": {"service": "contacts"}},
-        )
-        logger.info(
-            "Row Count from DB is: %s",
             db_rows,
-            extra={"tags": {"service": "contacts"}},
+            extra={"tags": {"service": "contacts", "finished": "full"}},
         )
     else:
         logger.error(
-            "ROW MISMATCH",
+            "Row Mismatch",
             extra={"tags": {"service": "contacts"}},
         )
 

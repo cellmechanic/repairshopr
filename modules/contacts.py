@@ -74,12 +74,13 @@ def contacts():
         extra={"tags": {"service": "contacts"}},
     )
 
+    insert_contacts(cursor, all_data, last_run_timestamp_unix)
+
     # Check ID sums to see if anything was deleted
     deleted = compare_id_sums(cursor, all_data, "contacts")
+
     if not deleted:
         move_deleted_contacts_to_deleted_table(cursor, connection, all_data)
-
-    insert_contacts(cursor, all_data, last_run_timestamp_unix)
 
     # Validate data / totals
     query = "SELECT COUNT(*) FROM contacts"
@@ -91,14 +92,10 @@ def contacts():
     # Check if the total entries match the expected count
     if db_rows == total_entries:
         logger.info(
-            "Meta Rows: %s",
+            "All Good -- Contact Meta Rows: %s, DB Rows: %s",
             total_entries,
-            extra={"tags": {"service": "contacts"}},
-        )
-        logger.info(
-            "Row Count from DB is: %s",
             db_rows,
-            extra={"tags": {"service": "contacts"}},
+            extra={"tags": {"service": "contacts", "finished": "full"}},
         )
     else:
         logger.error(
