@@ -528,10 +528,11 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
     )
 
 
-def insert_customers(cursor, items, last_run_timestamp_unix=0):
+def insert_customers(cursor, items, last_run_timestamp_unix):
     """Insert or update customers based on the items provided."""
     added = 0
     updated = 0
+    logger = start_loki("__insert_customers__")
     for item in items:
         # Check if the record exists and get the current updated_at value
         cursor.execute("SELECT updated_at FROM customers WHERE id = %s", (item["id"],))
@@ -635,6 +636,13 @@ def insert_customers(cursor, items, last_run_timestamp_unix=0):
                 item["referred_by"],
             )
             cursor.execute(sql, values)
+
+    logger.info(
+            "Added %s new customers, updated %s existing customers.",
+            added,
+            updated,
+            extra={"tags": {"service": "insert_customers", "finished": "yes"}},
+        )
 
 
 def insert_comments(cursor, items, last_run_timestamp_unix):
@@ -903,7 +911,9 @@ def insert_products(cursor, items):
                     item["serialized"],
                     json.dumps(item["vendor_ids"]),  # Convert list to JSON string
                     item.get("long_description", ""),
-                    json.dumps(item["location_quantities"]),  # Convert list to JSON string
+                    json.dumps(
+                        item["location_quantities"]
+                    ),  # Convert list to JSON string
                     json.dumps(item["photos"]),  # Convert list to JSON string
                     current_hash,
                     item["id"],

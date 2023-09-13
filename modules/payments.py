@@ -123,6 +123,8 @@ def payments(full_run=False, lookback_days=14):
         insert_payments(cursor, all_data, last_run_timestamp_unix)
 
         deleted = compare_id_sums(cursor, all_data, "payments")
+        # if not deleted:
+        # move_deleted_payments_to_deleted_table(cursor, connection, all_data)
 
     connection.commit()
     connection.close()
