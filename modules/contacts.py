@@ -88,6 +88,8 @@ def contacts():
     result = cursor.fetchone()
     if result is not None:
         db_rows = result[0]
+    else:
+        db_rows = 0
 
     # Check if the total entries match the expected count
     if db_rows == total_entries:

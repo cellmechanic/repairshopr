@@ -1,3 +1,4 @@
+#! /usr/bin/env python # pylint: disable=C0302
 """DB delete functions"""
 from library.loki_library import start_loki
 
@@ -101,6 +102,16 @@ def move_deleted_contacts_to_deleted_table(cursor, connection, data):
                 "tags": {
                     "service": "move_deleted_contacts_to_deleted_table",
                     "finished": "yes",
+                }
+            },
+        )
+        logger.warning(
+            "Deleted %s contacts.",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_contacts_to_deleted_table",
+                    "finished": "full",
                 }
             },
         )
@@ -227,6 +238,16 @@ def move_deleted_customers_to_deleted_table(cursor, connection, data):
                 }
             },
         )
+        logger.warning(
+            "Deleted %s customers.",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_customers_to_deleted_table",
+                    "finished": "full",
+                }
+            },
+        )
     else:
         logger.info(
             "The sum of customer IDs matches.",
@@ -324,6 +345,16 @@ def move_deleted_lines_to_deleted_table(cursor, connection, data):
                 "tags": {
                     "service": "move_deleted_lines_to_deleted_table",
                     "finished": "yes",
+                }
+            },
+        )
+        logger.warning(
+            "Deleted %s invoice items.",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_lines_to_deleted_table",
+                    "finished": "full",
                 }
             },
         )
@@ -452,6 +483,16 @@ def move_deleted_tickets_to_deleted_table(cursor, connection, data):
                 }
             },
         )
+        logger.warning(
+            "Deleted %s tickets.",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_tickets_to_deleted_table",
+                    "finished": "full",
+                }
+            },
+        )
     else:
         logger.info(
             "The sum of ticket IDs matches.",
@@ -551,6 +592,16 @@ def move_deleted_comments_to_deleted_table(cursor, connection, data):
                 "tags": {
                     "service": "move_deleted_comments_to_deleted_table",
                     "finished": "yes",
+                }
+            },
+        )
+        logger.warning(
+            "Deleted %s comments.",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_comments_to_deleted_table",
+                    "finished": "full",
                 }
             },
         )
@@ -656,6 +707,17 @@ def move_deleted_estimates_to_deleted_table(cursor, connection, data):
             },
         )
 
+        logger.warning(
+            "Deleted %s estimates.",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_estimates_to_deleted_table",
+                    "finished": "full",
+                }
+            },
+        )
+
 
 def move_deleted_invoices_to_deleted_table(cursor, connection, data):
     """Compare the id sums, and move any entries not
@@ -754,6 +816,16 @@ def move_deleted_invoices_to_deleted_table(cursor, connection, data):
                 "tags": {
                     "service": "move_deleted_invoices_to_deleted_table",
                     "finished": "yes",
+                }
+            },
+        )
+        logger.warning(
+            "Deleted %s invoices.",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_invoices_to_deleted_table",
+                    "finished": "full",
                 }
             },
         )
@@ -868,8 +940,128 @@ def move_deleted_products_to_deleted_table(cursor, connection, data):
                 }
             },
         )
+        logger.warning(
+            "Deleted %s products.",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_products_to_deleted_table",
+                    "finished": "full",
+                }
+            },
+        )
     else:
         logger.info(
             "The sum of product IDs matches.",
             extra={"tags": {"service": "move_deleted_products_to_deleted_table"}},
+        )
+
+
+def move_deleted_payments_to_deleted_table(cursor, connection, data):
+    """Compare the id sums and move any entries not
+    in the data array to the deleted_payments table."""
+    logger = start_loki("__move_deleted_payments_to_deleted_table__")
+
+    # Get the sum of the IDs from the database
+    cursor.execute("SELECT SUM(id) FROM payments")
+    payments_sum = cursor.fetchone()[0]
+
+    # Get the sum of the IDs from the API data
+    sum_of_ids_api = sum(payment["id"] for payment in data)
+    logger.warning(
+        "Sum of IDs from payments API: %s",
+        sum_of_ids_api,
+        extra={"tags": {"service": "move_deleted_payments_to_deleted_table"}},
+    )
+    logger.warning(
+        "Sum of IDs from payments DB: %s",
+        payments_sum,
+        extra={"tags": {"service": "move_deleted_payments_to_deleted_table"}},
+    )
+
+    if sum_of_ids_api != payments_sum:
+        deleted = 0
+        logger.warning(
+            "The sum of IDs does not match. Identifying deleted payments...",
+            extra={"tags": {"service": "move_deleted_payments_to_deleted_table"}},
+        )
+
+        cursor.execute(
+            """CREATE TABLE IF NOT EXISTS deleted_payments (
+                id INT PRIMARY KEY,
+                created_at DATETIME,
+                updated_at DATETIME,
+                success BOOLEAN,
+                payment_amount FLOAT,
+                invoice_ids JSON,
+                ref_num VARCHAR(255),
+                applied_at DATE,
+                payment_method VARCHAR(255),
+                transaction_response TEXT,
+                signature_date DATE,
+                customer JSON,
+                customer_id INT,
+                business_and_full_name VARCHAR(510)
+            )
+            """
+        )
+
+        # Get the set of IDs from the API data
+        api_ids = {payment["id"] for payment in data}
+
+        # Query all IDs from the payments table
+        cursor.execute("SELECT id FROM payments")
+        db_ids = cursor.fetchall()
+
+        # Check for IDs that are in the DB but not in the API data
+        for (db_id,) in db_ids:
+            if db_id not in api_ids:
+                logger.info(
+                    "Moving payment with ID %s to deleted_payments table...",
+                    db_id,
+                    extra={
+                        "tags": {
+                            "service": "move_deleted_payments_to_deleted_table",
+                            "finished": "yes",
+                        }
+                    },
+                )
+
+                # Copy the row to the deleted_payments table
+                cursor.execute(
+                    """INSERT INTO deleted_payments SELECT
+                                * FROM payments WHERE id = %s""",
+                    (db_id,),
+                )
+
+                # Delete the row from the payments table
+                cursor.execute("DELETE FROM payments WHERE id = %s", (db_id,))
+                deleted += 1
+
+                connection.commit()
+
+        logger.warning(
+            "Deleted %s payments.",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_payments_to_deleted_table",
+                    "finished": "yes",
+                }
+            },
+        )
+        logger.warning(
+            "Deleted %s payments.",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_payments_to_deleted_table",
+                    "finished": "full",
+                }
+            },
+        )
+    else:
+        logger.info(
+            "The sum of payment IDs matches.",
+            extra={"tags": {"service": "move_deleted_payments_to_deleted_table"}},
         )
