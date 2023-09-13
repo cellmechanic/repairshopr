@@ -97,7 +97,7 @@ def get_invoice_lines(page):
     url = f"{env_library.api_url_invoice_lines}?page={page}"
     headers = {"Authorization": f"Bearer {env_library.api_key_invoice}"}
 
-    logger = start_loki("__invoice_lines__")
+    logger = start_loki("__get_invoice_lines__")
 
     try:
         response = requests.get(url, headers=headers, timeout=10)

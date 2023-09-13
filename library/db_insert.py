@@ -14,7 +14,6 @@ def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
     updated = 0
 
     logger = start_loki("__insert_invoice_lines__")
-    logger.propagate = False
 
     for item in items:
         # Check if the record exists and get the current updated_at value

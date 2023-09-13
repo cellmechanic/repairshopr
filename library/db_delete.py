@@ -96,7 +96,7 @@ def move_deleted_contacts_to_deleted_table(cursor, connection, data):
                 connection.commit()
 
         logger.warning(
-            "Deleted %s contacts.",
+            "Deleted %s contact(s).",
             deleted,
             extra={
                 "tags": {
@@ -106,7 +106,7 @@ def move_deleted_contacts_to_deleted_table(cursor, connection, data):
             },
         )
         logger.warning(
-            "Deleted %s contacts.",
+            "Deleted %s contact(s).",
             deleted,
             extra={
                 "tags": {
@@ -229,7 +229,7 @@ def move_deleted_customers_to_deleted_table(cursor, connection, data):
                 connection.commit()
 
         logger.warning(
-            "Deleted %s customers.",
+            "Deleted %s customer(s).",
             deleted,
             extra={
                 "tags": {
@@ -239,7 +239,7 @@ def move_deleted_customers_to_deleted_table(cursor, connection, data):
             },
         )
         logger.warning(
-            "Deleted %s customers.",
+            "Deleted %s customer(s).",
             deleted,
             extra={
                 "tags": {
@@ -339,7 +339,7 @@ def move_deleted_lines_to_deleted_table(cursor, connection, data):
                 connection.commit()
 
         logger.warning(
-            "Deleted %s invoice items.",
+            "Deleted %s invoice item(s).",
             deleted,
             extra={
                 "tags": {
@@ -349,7 +349,7 @@ def move_deleted_lines_to_deleted_table(cursor, connection, data):
             },
         )
         logger.warning(
-            "Deleted %s invoice items.",
+            "Deleted %s invoice item(s).",
             deleted,
             extra={
                 "tags": {
@@ -474,7 +474,7 @@ def move_deleted_tickets_to_deleted_table(cursor, connection, data):
                 connection.commit()
 
         logger.warning(
-            "Deleted %s tickets.",
+            "Deleted %s ticket(s).",
             deleted,
             extra={
                 "tags": {
@@ -484,7 +484,7 @@ def move_deleted_tickets_to_deleted_table(cursor, connection, data):
             },
         )
         logger.warning(
-            "Deleted %s tickets.",
+            "Deleted %s ticket(s).",
             deleted,
             extra={
                 "tags": {
@@ -586,7 +586,7 @@ def move_deleted_comments_to_deleted_table(cursor, connection, data):
                 connection.commit()
 
         logger.warning(
-            "Deleted %s comments.",
+            "Deleted %s comment(s).",
             deleted,
             extra={
                 "tags": {
@@ -596,7 +596,7 @@ def move_deleted_comments_to_deleted_table(cursor, connection, data):
             },
         )
         logger.warning(
-            "Deleted %s comments.",
+            "Deleted %s comment(s).",
             deleted,
             extra={
                 "tags": {
@@ -697,7 +697,7 @@ def move_deleted_estimates_to_deleted_table(cursor, connection, data):
                 connection.commit()
 
         logger.warning(
-            "Deleted %s estimates.",
+            "Deleted %s estimate(s).",
             deleted,
             extra={
                 "tags": {
@@ -708,7 +708,7 @@ def move_deleted_estimates_to_deleted_table(cursor, connection, data):
         )
 
         logger.warning(
-            "Deleted %s estimates.",
+            "Deleted %s estimate(s).",
             deleted,
             extra={
                 "tags": {
@@ -810,7 +810,7 @@ def move_deleted_invoices_to_deleted_table(cursor, connection, data):
                 connection.commit()
 
         logger.warning(
-            "Deleted %s invoices.",
+            "Deleted %s invoice(s).",
             deleted,
             extra={
                 "tags": {
@@ -820,7 +820,7 @@ def move_deleted_invoices_to_deleted_table(cursor, connection, data):
             },
         )
         logger.warning(
-            "Deleted %s invoices.",
+            "Deleted %s invoice(s).",
             deleted,
             extra={
                 "tags": {
@@ -931,7 +931,7 @@ def move_deleted_products_to_deleted_table(cursor, connection, data):
                 connection.commit()
 
         logger.warning(
-            "Deleted %s products.",
+            "Deleted %s product(s).",
             deleted,
             extra={
                 "tags": {
@@ -941,7 +941,7 @@ def move_deleted_products_to_deleted_table(cursor, connection, data):
             },
         )
         logger.warning(
-            "Deleted %s products.",
+            "Deleted %s product(s).",
             deleted,
             extra={
                 "tags": {
@@ -1041,7 +1041,7 @@ def move_deleted_payments_to_deleted_table(cursor, connection, data):
                 connection.commit()
 
         logger.warning(
-            "Deleted %s payments.",
+            "Deleted %s payment(s).",
             deleted,
             extra={
                 "tags": {
@@ -1051,7 +1051,7 @@ def move_deleted_payments_to_deleted_table(cursor, connection, data):
             },
         )
         logger.warning(
-            "Deleted %s payments.",
+            "Deleted %s payment(s).",
             deleted,
             extra={
                 "tags": {

@@ -85,18 +85,16 @@ def products():
     # Check if total entries match the expected count
     if db_rows == total_entries:
         logger.info(
-            "Meta Rows: %s",
+            "All Good -- Product API Rows: %s, DB Rows: %s",
             total_entries,
-            extra={"tags": {"service": "products"}},
-        )
-        logger.info(
-            "Row Count from DB is: %s",
             db_rows,
-            extra={"tags": {"service": "products"}},
+            extra={"tags": {"service": "products", "finished": "full"}},
         )
     else:
         logger.error(
-            "Row Mismatch",
+            "Product Meta Rows: %s, DB Rows: %s",
+            total_entries,
+            db_rows,
             extra={"tags": {"service": "products"}},
         )
 
