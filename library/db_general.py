@@ -5,7 +5,7 @@ from library.loki_library import start_loki
 
 def rate_limit():
     """current rate limit setting"""
-    return 30 / 128
+    return 35 / 128
 
 
 def connect_to_db(config):
