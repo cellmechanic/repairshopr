@@ -45,7 +45,7 @@ def contacts():
         )
 
     # Iterate through all the pages
-    for page in range(1, total_pages + 1):
+    for page in range(1, 3):
         data = get_contacts(page)
         if data is not None:
             all_data.extend(data["contacts"])

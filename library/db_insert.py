@@ -72,11 +72,6 @@ def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
         else:
             # If record doesn't exist, insert it
             added += 1
-            logger.info(
-                "Inserting new line item %s",
-                item["id"],
-                extra={"tags": {"service": "invoice_lines"}},
-            )
             sql = """
                 INSERT INTO invoice_items (
                     id, created_at, updated_at, invoice_id, item, name,
