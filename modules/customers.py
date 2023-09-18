@@ -6,14 +6,11 @@ from library.db_create import create_customer_table_if_not_exists
 from library.db_delete import move_deleted_customers_to_deleted_table
 from library.db_general import compare_id_sums, connect_to_db, rate_limit
 from library.db_insert import insert_customers
-from library.loki_library import start_loki
 from library.timestamp_files import check_last_ran, update_last_ran
 
 
-def customers():
+def customers(logger):
     """main script for the customer module"""
-
-    logger = start_loki("__customers__")
 
     # Load timestamp
     timestamp_folder = "last-runs"
@@ -33,7 +30,7 @@ def customers():
     all_data = []
 
     # Get 1st Page, then check to make sure not null
-    data = get_customers(current_page)
+    data = get_customers(logger, current_page)
     if data is not None:
         total_pages = data["meta"]["total_pages"]
         total_entries = data["meta"]["total_entries"]
@@ -45,7 +42,7 @@ def customers():
 
     # Iterate through all the pages
     for page in range(1, total_pages + 1):
-        data = get_customers(page)
+        data = get_customers(logger, page)
         if data is not None:
             all_data.extend(data["customers"])
             logger.info(
@@ -72,13 +69,13 @@ def customers():
         extra={"tags": {"service": "contacts"}},
     )
 
-    insert_customers(cursor, all_data, last_run_timestamp_unix)
+    insert_customers(logger, cursor, all_data, last_run_timestamp_unix)
 
     # Check ID sums to see if anything was deleted
-    deleted = compare_id_sums(cursor, all_data, "customers")
+    deleted = compare_id_sums(logger, cursor, all_data, "customers")
 
     if not deleted:
-        move_deleted_customers_to_deleted_table(cursor, connection, all_data)
+        move_deleted_customers_to_deleted_table(logger, cursor, connection, all_data)
 
     # Validate data / totals
     query = "SELECT COUNT(*) FROM customers"

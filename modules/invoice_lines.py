@@ -9,14 +9,11 @@ from library.api_requests_library import (
     get_invoice_lines,
 )
 from library.fix_date_time_library import rs_to_unix_timestamp
-from library.loki_library import start_loki
 from library.timestamp_files import update_last_ran, check_last_ran
 
 
-def invoice_lines(full_run=False):
+def invoice_lines(logger, full_run=False):
     """main script for the invoice lines module"""
-
-    logger = start_loki("__invoice_lines__")
 
     # Load timestamp
     timestamp_folder = "last-runs"
@@ -36,7 +33,7 @@ def invoice_lines(full_run=False):
 
     if not full_run:
         # Get 1st Page, then check to make sure not null
-        data = get_invoice_lines(current_page)
+        data = get_invoice_lines(logger, current_page)
         if data is not None:
             total_pages = data["meta"]["total_pages"]
             current_page = total_pages
@@ -53,7 +50,7 @@ def invoice_lines(full_run=False):
 
         # work backwards from last page
         for page in range(total_pages, 0, -1):
-            data = get_invoice_lines(page)
+            data = get_invoice_lines(logger, page)
             if data is not None:
                 if (
                     rs_to_unix_timestamp(data["line_items"][-1]["updated_at"])
@@ -92,10 +89,10 @@ def invoice_lines(full_run=False):
             len(all_data),
             extra={"tags": {"service": "invoice_lines"}},
         )
-        insert_invoice_lines(cursor, all_data, last_run_timestamp_unix)
+        insert_invoice_lines(logger, cursor, all_data, last_run_timestamp_unix)
 
     if full_run:
-        data = get_invoice_lines(current_page)
+        data = get_invoice_lines(logger, current_page)
         if data is not None:
             total_pages = data["meta"]["total_pages"]
         else:
@@ -105,7 +102,7 @@ def invoice_lines(full_run=False):
             )
 
         for page in range(1, total_pages + 1):
-            data = get_invoice_lines(page)
+            data = get_invoice_lines(logger, page)
             if data is not None:
                 all_data.extend(data["line_items"])
                 logger.info(
@@ -132,12 +129,12 @@ def invoice_lines(full_run=False):
             extra={"tags": {"service": "invoice_lines"}},
         )
 
-        insert_invoice_lines(cursor, all_data, last_run_timestamp_unix)
+        insert_invoice_lines(logger, cursor, all_data, last_run_timestamp_unix)
 
-        deleted = compare_id_sums(cursor, all_data, "invoice_items")
+        deleted = compare_id_sums(logger, cursor, all_data, "invoice_items")
 
         if not deleted:
-            move_deleted_lines_to_deleted_table(cursor, connection, all_data)
+            move_deleted_lines_to_deleted_table(logger, cursor, connection, all_data)
 
         # Validate data / totals
         query = "SELECT COUNT(*) FROM invoice_items"

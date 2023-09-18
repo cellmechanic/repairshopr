@@ -12,14 +12,11 @@ from library.db_delete import (
 )
 from library.db_general import compare_id_sums, connect_to_db, rate_limit
 from library.db_insert import insert_comments, insert_tickets
-from library.loki_library import start_loki
 from library.timestamp_files import check_last_ran, update_last_ran
 
 
-def tickets(full_run=False, lookback_days=14):
+def tickets(logger, full_run=False, lookback_days=14):
     """main script for the ticket module"""
-    logger = start_loki("__ticket_days__")
-
     # Load timestamp
     timestamp_folder = "last-runs"
     timestamp_file = f"{timestamp_folder}/last_run_tickets_days.txt"
@@ -38,7 +35,7 @@ def tickets(full_run=False, lookback_days=14):
 
     if not full_run:
         # Get 1st Page, then check to make sure not null
-        data = get_tickets(current_page, lookback_days)
+        data = get_tickets(logger, current_page, lookback_days)
         if data is not None:
             total_pages = data["meta"]["total_pages"]
         else:
@@ -55,7 +52,7 @@ def tickets(full_run=False, lookback_days=14):
 
         # total_pages + 1
         for page in range(1, total_pages + 1):
-            data = get_tickets(page, lookback_days)
+            data = get_tickets(logger, page, lookback_days)
             if data is not None:
                 all_data.extend(data["tickets"])
                 logger.info(
@@ -82,8 +79,8 @@ def tickets(full_run=False, lookback_days=14):
             extra={"tags": {"service": "tickets"}},
         )
 
-        insert_tickets(cursor, all_data, last_run_timestamp_unix)
-        insert_comments(cursor, all_data, last_run_timestamp_unix)
+        insert_tickets(logger, cursor, all_data, last_run_timestamp_unix)
+        insert_comments(logger, cursor, all_data, last_run_timestamp_unix)
 
     if full_run:
         # Get 1st Page, then check to make sure not null
@@ -124,14 +121,16 @@ def tickets(full_run=False, lookback_days=14):
             extra={"tags": {"service": "tickets"}},
         )
 
-        insert_tickets(cursor, all_data, last_run_timestamp_unix)
-        comments_data = insert_comments(cursor, all_data, last_run_timestamp_unix)
+        insert_tickets(logger, cursor, all_data, last_run_timestamp_unix)
+        comments_data = insert_comments(
+            logger, cursor, all_data, last_run_timestamp_unix
+        )
 
         # Check ID sums to see if any comment was deleted
-        deleted = compare_id_sums(cursor, comments_data, "comments")
+        deleted = compare_id_sums(logger, cursor, comments_data, "comments")
 
         if not deleted:
-            move_deleted_comments_to_deleted_table(cursor, connection, all_data)
+            move_deleted_comments_to_deleted_table(logger, cursor, connection, all_data)
 
         # Validate data / totals
         query = "SELECT COUNT(*) FROM comments"
@@ -159,10 +158,10 @@ def tickets(full_run=False, lookback_days=14):
             )
 
         # Again for tickets
-        deleted = compare_id_sums(cursor, all_data, "tickets")
+        deleted = compare_id_sums(logger, cursor, all_data, "tickets")
 
         if not deleted:
-            move_deleted_tickets_to_deleted_table(cursor, connection, all_data)
+            move_deleted_tickets_to_deleted_table(logger, cursor, connection, all_data)
 
         # Validate data / totals
         query = "SELECT COUNT(*) FROM tickets"

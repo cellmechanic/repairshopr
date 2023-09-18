@@ -1,155 +1,228 @@
 """api requests"""
 from datetime import datetime, timedelta
+import time
 import requests
 from library import env_library
-from library.loki_library import start_loki
 
 
-def get_contacts(page):
+def get_contacts(logger, page, max_retries=3, retry_delay=30):
     """api request for contacts"""
     url = f"{env_library.api_url_contact}?page={page}"
     headers = {"Authorization": f"Bearer {env_library.api_key_contact}"}
 
-    logger = start_loki("__get_contacts__")
+    for retry_count in range(max_retries):
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
 
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        if response.status_code != 200:
+            if response.status_code == 429:
+                logger.error(
+                    "Rate limit exceeded for fetching contacts on page %s: %s",
+                    page,
+                    response.text,
+                    extra={"tags": {"service": "contacts", "error": "rate limit"}},
+                )
+                time.sleep(retry_delay)
+                continue
+
+            if response.status_code != 200:
+                logger.error(
+                    "Error fetching contacts on page %s: %s",
+                    page,
+                    response.text,
+                    extra={"tags": {"service": "contacts", "error": "non 200"}},
+                )
+                return None
+
+            return response.json()
+
+        except requests.RequestException as error:
             logger.error(
-                "Error fetching contacts on page %s: %s",
+                "Error fetching contacts on page %s (Retry %s/%s): %s",
                 page,
-                response.text,
-                extra={"tags": {"service": "contacts"}},
+                retry_count + 1,
+                max_retries,
+                str(error),
+                extra={"tags": {"service": "contacts", "error": "retry"}},
             )
-            return None
-        return response.json()
-    except requests.RequestException as error:
-        logger.error(
-            "Error fetching contacts on page %s: %s",
-            page,
-            str(error),
-            extra={"tags": {"service": "contacts"}},
-        )
-        return None
+
+    return None
 
 
-def get_estimates(page):
+def get_estimates(logger, page, max_retries=3, retry_delay=30):
     """api request for estimates"""
-    logger = start_loki("__get_estimates__")
-    url = f"{env_library.api_url_estimates}"
+    url = f"{env_library.api_url_estimates}?page={page}"
     headers = {"Authorization": f"Bearer {env_library.api_key_estimates}"}
-    param = {"page": page}
 
-    try:
-        response = requests.get(url, headers=headers, params=param, timeout=10)
-        if response.status_code != 200:
+    for retry_count in range(max_retries):
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+
+            if response.status_code == 429:
+                logger.error(
+                    "Rate limit exceeded for fetching estimates on page %s: %s",
+                    page,
+                    response.text,
+                    extra={"tags": {"service": "estimates", "error": "rate limit"}},
+                )
+                time.sleep(retry_delay)
+                continue
+
+            if response.status_code != 200:
+                logger.error(
+                    "Error fetching estimates on page %s: %s",
+                    page,
+                    response.text,
+                    extra={"tags": {"service": "estimates", "error": "non 200"}},
+                )
+                return None
+
+            return response.json()
+        except requests.RequestException as error:
             logger.error(
-                "Error fetching estimates on page %s: %s",
+                "Error fetching estimates on page %s (Retry %s/%s): %s",
                 page,
-                response.text,
+                retry_count + 1,
+                max_retries,
+                str(error),
                 extra={"tags": {"service": "estimates"}},
             )
-            return None
-        return response.json()
-    except requests.RequestException as error:
-        logger.error(
-            "Error fetching estimates on page %s: %s",
-            page,
-            str(error),
-            extra={"tags": {"service": "estimates"}},
-        )
-        return None
+
+    return None
 
 
-def get_payments(page):
+def get_payments(logger, page, max_retries=3, retry_delay=30):
     """api request for payments"""
-    logger = start_loki("__get_payments__")
 
-    url = f"{env_library.api_url_payments}"
+    url = f"{env_library.api_url_payments}?page={page}"
     headers = {"Authorization": f"Bearer {env_library.api_key_payments}"}
-    param = {"page": page}
 
-    try:
-        response = requests.get(url, headers=headers, params=param, timeout=10)
-        if response.status_code != 200:
+    for retry_count in range(max_retries):
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+
+            if response.status_code == 429:
+                logger.error(
+                    "Rate limit exceeded for fetching payments on page %s: %s",
+                    page,
+                    response.text,
+                    extra={"tags": {"service": "payments", "error": "rate limit"}},
+                )
+                time.sleep(retry_delay)
+                continue
+
+            if response.status_code != 200:
+                logger.error(
+                    "Error fetching payments on page %s: %s",
+                    page,
+                    response.text,
+                    extra={"tags": {"service": "payments", "error": "non 200"}},
+                )
+                return None
+
+            return response.json()
+        except requests.RequestException as error:
             logger.error(
-                "Error fetching payments on page %s: %s",
+                "Error fetching payments on page %s (Retry %s/%s): %s",
                 page,
-                response.text,
+                retry_count + 1,
+                max_retries,
+                str(error),
                 extra={"tags": {"service": "payments"}},
             )
-            return None
-        return response.json()
-    except requests.RequestException as error:
-        logger.error(
-            "Error fetching payments on page %s: %s",
-            page,
-            str(error),
-            extra={"tags": {"service": "payments"}},
-        )
-        return None
+
+    return None
 
 
-def get_customers(page):
+def get_customers(logger, page, max_retries=3, retry_delay=30):
     """api request for customers"""
     url = f"{env_library.api_url_customers}?page={page}"
     headers = {"Authorization": f"Bearer {env_library.api_key_customers}"}
 
-    logger = start_loki("__get_customers__")
+    for retry_count in range(max_retries):
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
 
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        if response.status_code != 200:
+            if response.status_code == 429:
+                logger.error(
+                    "Rate limit exceeded for fetching customers on page %s: %s",
+                    page,
+                    response.text,
+                    extra={"tags": {"service": "customers", "error": "rate limit"}},
+                )
+                time.sleep(retry_delay)
+                continue
+
+            if response.status_code != 200:
+                logger.error(
+                    "Error fetching customers on page %s: %s",
+                    page,
+                    response.text,
+                    extra={"tags": {"service": "customers", "error": "non 200"}},
+                )
+                return None
+
+            return response.json()
+
+        except requests.RequestException as error:
             logger.error(
-                "Error fetching customers on page %s: %s",
+                "Error fetching customers on page %s (Retry %s/%s): %s",
                 page,
-                response.text,
+                retry_count + 1,
+                max_retries,
+                str(error),
                 extra={"tags": {"service": "customers"}},
             )
-            return None
-        return response.json()
-    except requests.RequestException as error:
-        logger.error(
-            "Error fetching customers on page %s: %s",
-            page,
-            str(error),
-            extra={"tags": {"service": "customers"}},
-        )
-        return None
+
+    return None
 
 
-def get_invoice_lines(page):
+def get_invoice_lines(logger, page, max_retries=3, retry_delay=30):
     """api request for invoice line items"""
     url = f"{env_library.api_url_invoice_lines}?page={page}"
     headers = {"Authorization": f"Bearer {env_library.api_key_invoice}"}
 
-    logger = start_loki("__get_invoice_lines__")
+    for retry_count in range(max_retries):
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
 
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        if response.status_code != 200:
+            if response.status_code == 429:
+                logger.error(
+                    "Rate limit exceeded for fetching invoice line items on page %s: %s",
+                    page,
+                    response.text,
+                    extra={"tags": {"service": "invoice_lines", "error": "rate limit"}},
+                )
+                time.sleep(retry_delay)
+                continue
+
+            if response.status_code != 200:
+                logger.error(
+                    "Error fetching invoice line items on page %s: %s",
+                    page,
+                    response.text,
+                    extra={"tags": {"service": "invoice_lines", "error": "non 200"}},
+                )
+                return None
+
+            return response.json()
+
+        except requests.RequestException as error:
             logger.error(
-                "Error fetching invoice line items on page %s: %s",
+                "Error fetching invoice line items on page %s (Retry %s/%s): %s",
                 page,
-                response.text,
-                extra={"tags": {"service": "invoice_lines"}},
+                retry_count + 1,
+                max_retries,
+                str(error),
+                extra={"tags": {"service": "invoice_lines", "error": "retry"}},
             )
-            return None
-        return response.json()
-    except requests.RequestException as error:
-        logger.error(
-            "Error fetching invoice line items on page %s: %s",
-            page,
-            str(error),
-            extra={"tags": {"service": "invoice_lines"}},
-        )
-        return None
+
+    return None
 
 
-def get_tickets(page=None, look_back_period=None):
+def get_tickets(
+    logger, page=None, look_back_period=None, max_retries=3, retry_delay=30
+):
     """api request for ticket data"""
-
-    logger = start_loki("__get_tickets__")
     # base url / header key
     url = f"{env_library.api_url_tickets}"
     headers = {"Authorization": f"Bearer {env_library.api_key_tickets}"}
@@ -161,35 +234,50 @@ def get_tickets(page=None, look_back_period=None):
     if look_back_period is not None:
         params["since_updated_at"] = get_date_for_header(look_back_period)
 
-    try:
-        response = requests.get(url, headers=headers, params=params, timeout=10)
-        if response.status_code != 200:
+    for retry_count in range(max_retries):
+        try:
+            response = requests.get(url, headers=headers, params=params, timeout=10)
+
+            if response.status_code == 429:
+                logger.error(
+                    "Rate limit exceeded for fetching ticket data on page %s: %s",
+                    page,
+                    response.text,
+                    extra={"tags": {"service": "tickets", "error": "rate limit"}},
+                )
+                time.sleep(retry_delay)
+                continue
+
+            if response.status_code != 200:
+                logger.error(
+                    "Error fetching ticket data on page %s: %s",
+                    page,
+                    response.text,
+                    extra={"tags": {"service": "tickets", "error": "non 200"}},
+                )
+                return None
+
+            return response.json()
+
+        except requests.RequestException as error:
             logger.error(
-                "Error fetching ticket data on page %s: %s",
+                "Error fetching ticket data on page %s (Retry %s/%s): %s",
                 page,
-                response.text,
+                retry_count + 1,
+                max_retries,
+                str(error),
                 extra={"tags": {"service": "tickets"}},
             )
-            return None
-        return response.json()
 
-    except requests.RequestException as error:
-        logger.error(
-            "Error fetching ticket data on page %s: %s",
-            page,
-            str(error),
-            extra={"tags": {"service": "tickets"}},
-        )
-        return None
+    return None
 
 
-def get_invoices(page=None, look_back_date=None):
+def get_invoices(logger, page=None, look_back_date=None, max_retries=3, retry_delay=30):
     """API request for invoice data."""
     # base url / header key
     url = f"{env_library.api_url_invoice}"
     headers = {"Authorization": f"Bearer {env_library.api_key_invoice}"}
 
-    logger = start_loki("__get_invoices__")
     # params
     params = {}
     if page is not None:
@@ -197,55 +285,85 @@ def get_invoices(page=None, look_back_date=None):
     if look_back_date is not None:
         params["since_updated_at"] = look_back_date
 
-    try:
-        response = requests.get(url, headers=headers, params=params, timeout=10)
-        if response.status_code != 200:
+    for retry_count in range(max_retries):
+        try:
+            response = requests.get(url, headers=headers, params=params, timeout=10)
+
+            if response.status_code == 429:
+                logger.error(
+                    "Rate limit exceeded for fetching invoices on page %s: %s",
+                    page,
+                    response.text,
+                    extra={"tags": {"service": "invoices", "error": "rate limit"}},
+                )
+                time.sleep(retry_delay)
+                continue
+
+            if response.status_code != 200:
+                logger.error(
+                    "Error fetching invoices on page %s: %s",
+                    page,
+                    response.text,
+                    extra={"tags": {"service": "invoices", "error": "non 200"}},
+                )
+                return None
+
+            return response.json()
+
+        except requests.RequestException as error:
             logger.error(
-                "Error fetching invoices on page %s: %s",
+                "Error fetching invoices on page %s (Retry %s/%s): %s",
                 page,
-                response.text,
-                extra={"tags": {"service": "invoices"}},
+                retry_count + 1,
+                max_retries,
+                str(error),
+                extra={"tags": {"service": "invoices", "error": "retry"}},
             )
-            return None
-        return response.json()
 
-    except requests.RequestException as error:
-        logger.error(
-            "Error fetching invoices on page %s: %s",
-            page,
-            str(error),
-            extra={"tags": {"service": "invoices"}},
-        )
-        return None
+    return None
 
 
-def get_products(page=None):
+def get_products(logger, page, max_retries=3, retry_delay=30):
     """api request for products"""
-    logger = start_loki("__get_products__")
-
-    url = f"{env_library.api_url_products}"
+    url = f"{env_library.api_url_products}?page={page}"
     headers = {"Authorization": f"Bearer {env_library.api_key_products}"}
-    param = {"page": page}
 
-    try:
-        response = requests.get(url, headers=headers, params=param, timeout=10)
-        if response.status_code != 200:
+    for retry_count in range(max_retries):
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+
+            if response.status_code == 429:
+                logger.error(
+                    "Rate limit exceeded for fetching products on page %s: %s",
+                    page,
+                    response.text,
+                    extra={"tags": {"service": "products", "error": "rate limit"}},
+                )
+                time.sleep(retry_delay)
+                continue
+
+            if response.status_code != 200:
+                logger.error(
+                    "Error fetching products on page %s: %s",
+                    page,
+                    response.text,
+                    extra={"tags": {"service": "products", "error": "non 200"}},
+                )
+                return None
+
+            return response.json()
+
+        except requests.RequestException as error:
             logger.error(
-                "Error fetching products on page %s: %s",
+                "Error fetching products on page %s (Retry %s/%s): %s",
                 page,
-                response.text,
-                extra={"tags": {"service": "products"}},
+                retry_count + 1,
+                max_retries,
+                str(error),
+                extra={"tags": {"service": "products", "error": "retry"}},
             )
-            return None
-        return response.json()
-    except requests.RequestException as error:
-        logger.error(
-            "Error fetching products on page %s: %s",
-            page,
-            str(error),
-            extra={"tags": {"service": "products"}},
-        )
-        return None
+
+    return None
 
 
 def get_date_for_header(look_back):

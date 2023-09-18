@@ -1,12 +1,11 @@
 #! /usr/bin/env python # pylint: disable=C0302
 """DB delete functions"""
-from library.loki_library import start_loki
 
 
-def move_deleted_contacts_to_deleted_table(cursor, connection, data):
+def move_deleted_contacts_to_deleted_table(logger, cursor, connection, data):
     """compare the id sums, and move any entries not
     in the data array to the deleted_contacts table"""
-    logger = start_loki("__move_deleted_contacts_to_deleted_table__")
+
     # Get the sum of the IDs from the database
     cursor.execute("SELECT SUM(id) FROM contacts")
     contacts_sum = cursor.fetchone()[0]
@@ -122,11 +121,9 @@ def move_deleted_contacts_to_deleted_table(cursor, connection, data):
         )
 
 
-def move_deleted_customers_to_deleted_table(cursor, connection, data):
+def move_deleted_customers_to_deleted_table(logger, cursor, connection, data):
     """compare the id sums, and move any entries not
     in the data array to the deleted_customers table"""
-
-    logger = start_loki("__move_deleted_customers_to_deleted_table__")
 
     # Get the sum of the IDs from the database
     cursor.execute("SELECT SUM(id) FROM customers")
@@ -255,12 +252,9 @@ def move_deleted_customers_to_deleted_table(cursor, connection, data):
         )
 
 
-def move_deleted_lines_to_deleted_table(cursor, connection, data):
+def move_deleted_lines_to_deleted_table(logger, cursor, connection, data):
     """Compare the id sums, and move any entries not
     in the data array to the deleted_invoice_items table"""
-
-    logger = start_loki("__move_deleted_lines_to_deleted_table__")
-
     # Get the sum of the IDs from the database
     cursor.execute("SELECT SUM(id) FROM invoice_items")
     line_items_sum = cursor.fetchone()[0]
@@ -365,11 +359,9 @@ def move_deleted_lines_to_deleted_table(cursor, connection, data):
         )
 
 
-def move_deleted_tickets_to_deleted_table(cursor, connection, data):
+def move_deleted_tickets_to_deleted_table(logger, cursor, connection, data):
     """Compare the id sums, and move any entries not
     in the data array to the deleted_tickets table"""
-
-    logger = start_loki("__move_deleted_tickets_to_deleted_table__")
 
     # Get the sum of the IDs from the database
     cursor.execute("SELECT SUM(id) FROM tickets")
@@ -500,11 +492,9 @@ def move_deleted_tickets_to_deleted_table(cursor, connection, data):
         )
 
 
-def move_deleted_comments_to_deleted_table(cursor, connection, data):
+def move_deleted_comments_to_deleted_table(logger, cursor, connection, data):
     """Compare the id sums, and move any entries not
     in the data array to the deleted_comments table"""
-
-    logger = start_loki("__move_deleted_comments_to_deleted_table__")
 
     # Get the sum of the IDs from the database
     cursor.execute("SELECT SUM(id) FROM comments")
@@ -612,11 +602,9 @@ def move_deleted_comments_to_deleted_table(cursor, connection, data):
         )
 
 
-def move_deleted_estimates_to_deleted_table(cursor, connection, data):
+def move_deleted_estimates_to_deleted_table(logger, cursor, connection, data):
     """Compare the id sums, and move any entries not
     in the data array to the deleted_estimates table"""
-
-    logger = start_loki("__move_deleted_estimates_to_deleted_table__")
 
     # Get the sum of the IDs from the database
     cursor.execute("SELECT SUM(id) FROM estimates")
@@ -729,11 +717,9 @@ def move_deleted_estimates_to_deleted_table(cursor, connection, data):
         )
 
 
-def move_deleted_invoices_to_deleted_table(cursor, connection, data):
+def move_deleted_invoices_to_deleted_table(logger, cursor, connection, data):
     """Compare the id sums, and move any entries not
     in the data array to the deleted_invoices table"""
-
-    logger = start_loki("__move_deleted_invoices_to_deleted_table__")
 
     # Get the sum of the IDs from the database
     cursor.execute("SELECT SUM(id) FROM invoices")
@@ -841,10 +827,9 @@ def move_deleted_invoices_to_deleted_table(cursor, connection, data):
         )
 
 
-def move_deleted_products_to_deleted_table(cursor, connection, data):
+def move_deleted_products_to_deleted_table(logger, cursor, connection, data):
     """Compare the id sums, and move any entries not
     in the data array to the deleted_products table."""
-    logger = start_loki("__move_deleted_products_to_deleted_table__")
 
     # Get the sum of the IDs from the database
     cursor.execute("SELECT SUM(id) FROM products")
@@ -967,10 +952,9 @@ def move_deleted_products_to_deleted_table(cursor, connection, data):
         )
 
 
-def move_deleted_payments_to_deleted_table(cursor, connection, data):
+def move_deleted_payments_to_deleted_table(logger, cursor, connection, data):
     """Compare the id sums and move any entries not
     in the data array to the deleted_payments table."""
-    logger = start_loki("__move_deleted_payments_to_deleted_table__")
 
     # Get the sum of the IDs from the database
     cursor.execute("SELECT SUM(id) FROM payments")

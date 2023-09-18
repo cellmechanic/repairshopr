@@ -7,13 +7,10 @@ from library.db_create import create_products_table_if_not_exists
 from library.db_delete import move_deleted_products_to_deleted_table
 from library.db_general import compare_id_sums, connect_to_db, rate_limit
 from library.db_insert import insert_products
-from library.loki_library import start_loki
 
 
-def products():
+def products(logger):
     """main script for the products module"""
-
-    logger = start_loki("__products__")
 
     # Database configurations
     config = env_library.config
@@ -28,7 +25,7 @@ def products():
     all_data = []
 
     # Get 1st Page, then check to make sure not null
-    data = get_products(current_page)
+    data = get_products(logger, current_page)
     if data is not None:
         total_pages = data["meta"]["total_pages"]
         total_entries = data["meta"]["total_entries"]
@@ -40,7 +37,7 @@ def products():
 
     # Iterate through all the pages
     for page in range(1, total_pages + 1):
-        data = get_products(page)
+        data = get_products(logger, page)
         if data is not None:
             all_data.extend(data["products"])
             logger.info(
@@ -68,12 +65,12 @@ def products():
         extra={"tags": {"service": "products"}},
     )
 
-    insert_products(cursor, all_data)
+    insert_products(logger, cursor, all_data)
 
     # Check ID sums to see if anything was deleted
-    deleted = compare_id_sums(cursor, all_data, "products")
+    deleted = compare_id_sums(logger, cursor, all_data, "products")
     if not deleted:
-        move_deleted_products_to_deleted_table(cursor, connection, all_data)
+        move_deleted_products_to_deleted_table(logger, cursor, connection, all_data)
 
     # Validate data / totals
     query = "SELECT COUNT(*) FROM products"

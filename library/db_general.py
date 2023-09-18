@@ -1,11 +1,10 @@
 """General DB utilities"""
 import mysql.connector
-from library.loki_library import start_loki
 
 
 def rate_limit():
     """current rate limit setting"""
-    return 50/180
+    return 5 / 180
 
 
 def connect_to_db(config):
@@ -15,10 +14,8 @@ def connect_to_db(config):
     return cursor, connection
 
 
-def compare_id_sums(cursor, data, table_name):
+def compare_id_sums(logger, cursor, data, table_name):
     """compare the id sums to make sure they match"""
-
-    logger = start_loki("__compare_id_sums__")
 
     if table_name == "contacts":
         cursor.execute("SELECT SUM(id) FROM contacts")

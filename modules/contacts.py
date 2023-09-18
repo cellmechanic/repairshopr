@@ -9,13 +9,9 @@ from library.api_requests_library import (
     get_contacts,
 )
 from library.timestamp_files import update_last_ran, check_last_ran
-from library.loki_library import start_loki
 
-
-def contacts():
+def contacts(logger):
     """main script for the contact module"""
-    logger = start_loki("__contacts__")
-
     # Load timestamp
     timestamp_folder = "last-runs"
     timestamp_file = f"{timestamp_folder}/last_run_contacts.txt"
@@ -34,7 +30,7 @@ def contacts():
     all_data = []
 
     # Get 1st Page, then check to make sure not null
-    data = get_contacts(current_page)
+    data = get_contacts(logger, current_page)
     if data is not None:
         total_pages = data["meta"]["total_pages"]
         total_entries = data["meta"]["total_entries"]
@@ -46,7 +42,7 @@ def contacts():
 
     # Iterate through all the pages
     for page in range(1, 3):
-        data = get_contacts(page)
+        data = get_contacts(logger, page)
         if data is not None:
             all_data.extend(data["contacts"])
             logger.info(
@@ -74,13 +70,13 @@ def contacts():
         extra={"tags": {"service": "contacts"}},
     )
 
-    insert_contacts(cursor, all_data, last_run_timestamp_unix)
+    insert_contacts(logger, cursor, all_data, last_run_timestamp_unix)
 
     # Check ID sums to see if anything was deleted
-    deleted = compare_id_sums(cursor, all_data, "contacts")
+    deleted = compare_id_sums(logger, cursor, all_data, "contacts")
 
     if not deleted:
-        move_deleted_contacts_to_deleted_table(cursor, connection, all_data)
+        move_deleted_contacts_to_deleted_table(logger, cursor, connection, all_data)
 
     # Validate data / totals
     query = "SELECT COUNT(*) FROM contacts"

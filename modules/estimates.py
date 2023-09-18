@@ -7,14 +7,11 @@ from library.db_create import create_estimates_table_if_not_exists
 from library.db_delete import move_deleted_estimates_to_deleted_table
 from library.db_general import compare_id_sums, connect_to_db, rate_limit
 from library.db_insert import insert_estimates
-from library.loki_library import start_loki
 from library.timestamp_files import check_last_ran, update_last_ran
 
 
-def estimates(full_run=False, lookback_days=365):
+def estimates(logger, full_run=False, lookback_days=365):
     """main script for the estimates module"""
-
-    logger = start_loki("__estimates__")
 
     # Database configurations
     config = env_library.config
@@ -33,7 +30,7 @@ def estimates(full_run=False, lookback_days=365):
 
     if not full_run:
         # Get 1st Page, then check to make sure not null
-        data = get_estimates(current_page)
+        data = get_estimates(logger, current_page)
         if data is not None:
             total_pages = data["meta"]["total_pages"]
         else:
@@ -46,7 +43,7 @@ def estimates(full_run=False, lookback_days=365):
         found_page = 0
 
         for page in range(1, total_pages + 1):
-            data = get_estimates(page)
+            data = get_estimates(logger, page)
             if data is not None and "estimates" in data:
                 found_older = any(
                     item["created_at"] < lookback_date_formatted
@@ -85,10 +82,10 @@ def estimates(full_run=False, lookback_days=365):
             extra={"tags": {"service": "estimates"}},
         )
 
-        insert_estimates(cursor, all_data, last_run_timestamp_unix)
+        insert_estimates(logger, cursor, all_data, last_run_timestamp_unix)
 
     if full_run:
-        data = get_estimates(current_page)
+        data = get_estimates(logger, current_page)
         if data is not None:
             total_pages = data["meta"]["total_pages"]
         else:
@@ -98,7 +95,7 @@ def estimates(full_run=False, lookback_days=365):
             )
 
         for page in range(1, total_pages + 1):
-            data = get_estimates(page)
+            data = get_estimates(logger, page)
             if data is not None:
                 all_data.extend(data["estimates"])
                 logger.info(
@@ -123,12 +120,12 @@ def estimates(full_run=False, lookback_days=365):
             extra={"tags": {"service": "estimates"}},
         )
 
-        insert_estimates(cursor, all_data, last_run_timestamp_unix)
+        insert_estimates(logger, cursor, all_data, last_run_timestamp_unix)
 
-        deleted = compare_id_sums(cursor, all_data, "estimates")
+        deleted = compare_id_sums(logger, cursor, all_data, "estimates")
 
         if not deleted:
-            move_deleted_estimates_to_deleted_table(cursor, connection, all_data)
+            move_deleted_estimates_to_deleted_table(logger, cursor, connection, all_data)
 
         # Validate data / totals
         query = "SELECT COUNT(*) FROM estimates"

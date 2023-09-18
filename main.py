@@ -6,6 +6,7 @@ from modules.invoices import invoices
 from modules.estimates import estimates
 from modules.invoice_lines import invoice_lines
 from modules.contacts import contacts
+from modules.output import output
 from modules.payments import payments
 from modules.products import products
 from modules.tickets import tickets
@@ -33,14 +34,15 @@ def main():
             extra={"tags": {"service": "main_frequent", "finished": "yes"}},
         )
 
-        contacts()  # Always does full run, small data set
-        customers()  # Always does a full run, small data set
-        estimates(False, 14)
-        invoice_lines()
-        invoices(False, 14)
-        payments(False, 14)
-        tickets(False, 14)
-        products()  # Always does a full run, small data set
+        contacts(logger)  # Always does full run, small data set
+        customers(logger)  # Always does a full run, small data set
+        estimates(logger, False, 14)
+        invoice_lines(logger)
+        invoices(logger, False, 14)
+        payments(logger, False, 14)
+        tickets(logger, False, 14)
+        products(logger)  # Always does a full run, small data set
+        output(logger)
 
         logger.info(
             "----------END EVERY 5 MINS----------------",
@@ -55,14 +57,14 @@ def main():
             extra={"tags": {"service": "main_full", "finished": "full"}},
         )
 
-        contacts()
-        customers()
-        estimates(True, 0)
-        invoice_lines(True)
-        invoices(True, 0)
-        payments(True, 0)
-        tickets(True, 0)
-        products()
+        contacts(logger)
+        customers(logger)
+        estimates(logger, True, 0)
+        invoice_lines(logger, True)
+        invoices(logger, True, 0)
+        payments(logger, True, 0)
+        tickets(logger, True, 0)
+        products(logger)
 
         logger.info(
             "---------END FULL RUN---------------",

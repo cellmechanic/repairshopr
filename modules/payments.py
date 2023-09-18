@@ -7,14 +7,11 @@ from library.db_create import create_payments_table_if_not_exists
 from library.db_delete import move_deleted_payments_to_deleted_table
 from library.db_general import compare_id_sums, connect_to_db, rate_limit
 from library.db_insert import insert_payments
-from library.loki_library import start_loki
 from library.timestamp_files import check_last_ran, update_last_ran
 
 
-def payments(full_run=False, lookback_days=14):
+def payments(logger, full_run=False, lookback_days=14):
     """main function to get payments data"""
-
-    logger = start_loki("__payments__")
 
     # Database configurations
     config = env_library.config
@@ -33,7 +30,7 @@ def payments(full_run=False, lookback_days=14):
 
     if not full_run:
         # Get 1st Page, then check to make sure not null
-        data = get_payments(current_page)
+        data = get_payments(logger, current_page)
         if data is not None:
             total_pages = data["meta"]["total_pages"]
         else:
@@ -49,7 +46,7 @@ def payments(full_run=False, lookback_days=14):
         for page in range(1, total_pages + 1):
             if found_older:
                 break
-            data = get_payments(page)
+            data = get_payments(logger, page)
             if data is not None and "payments" in data:
                 found_older = any(
                     item["created_at"] < lookback_date_formatted
@@ -83,10 +80,10 @@ def payments(full_run=False, lookback_days=14):
                 extra={"tags": {"service": "payments"}},
             )
 
-        insert_payments(cursor, all_data, last_run_timestamp_unix)
+        insert_payments(logger, cursor, all_data, last_run_timestamp_unix)
 
     if full_run:
-        data = get_payments(current_page)
+        data = get_payments(logger, current_page)
         if data is not None:
             total_pages = data["meta"]["total_pages"]
         else:
@@ -96,7 +93,7 @@ def payments(full_run=False, lookback_days=14):
             )
 
         for page in range(1, total_pages + 1):
-            data = get_payments(page)
+            data = get_payments(logger, page)
             if data is not None:
                 all_data.extend(data["payments"])
                 logger.info(
@@ -121,12 +118,12 @@ def payments(full_run=False, lookback_days=14):
             extra={"tags": {"service": "payments"}},
         )
 
-        insert_payments(cursor, all_data, last_run_timestamp_unix)
+        insert_payments(logger, cursor, all_data, last_run_timestamp_unix)
 
-        deleted = compare_id_sums(cursor, all_data, "payments")
+        deleted = compare_id_sums(logger, cursor, all_data, "payments")
         if not deleted:
-            move_deleted_payments_to_deleted_table(cursor, connection, all_data)
-        
+            move_deleted_payments_to_deleted_table(logger, cursor, connection, all_data)
+
         # Validate data / totals
         query = "SELECT COUNT(*) FROM payments"
         cursor.execute(query)

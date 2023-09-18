@@ -5,15 +5,12 @@ from library.fix_date_time_library import (
     rs_to_unix_timestamp,
     format_date_fordb,
 )
-from library.loki_library import start_loki
 
 
-def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
+def insert_invoice_lines(logger, cursor, items, last_run_timestamp_unix):
     """insert invoice lines"""
     added = 0
     updated = 0
-
-    logger = start_loki("__insert_invoice_lines__")
 
     for item in items:
         # Check if the record exists and get the current updated_at value
@@ -112,11 +109,10 @@ def insert_invoice_lines(cursor, items, last_run_timestamp_unix):
     )
 
 
-def insert_tickets(cursor, items, last_run_timestamp_unix):
+def insert_tickets(logger, cursor, items, last_run_timestamp_unix):
     """Insert or update tickets based on the items provided."""
     added = 0
     updated = 0
-    logger = start_loki("__insert_tickets__")
 
     for item in items:
         # Check if the record exists and get the current updated_at value
@@ -215,9 +211,8 @@ def insert_tickets(cursor, items, last_run_timestamp_unix):
     )
 
 
-def insert_estimates(cursor, items, last_run_timestamp_unix):
+def insert_estimates(logger, cursor, items, last_run_timestamp_unix):
     """Insert or update estimates based on the items provided."""
-    logger = start_loki("__insert_estimates__")
     added = 0
     updated = 0
     for item in items:
@@ -305,9 +300,8 @@ def insert_estimates(cursor, items, last_run_timestamp_unix):
     )
 
 
-def insert_payments(cursor, items, last_run_timestamp_unix):
+def insert_payments(logger, cursor, items, last_run_timestamp_unix):
     """Insert or update payments based on the items provided."""
-    logger = start_loki("__insert_payments__")
     added = 0
     updated = 0
 
@@ -394,9 +388,8 @@ def insert_payments(cursor, items, last_run_timestamp_unix):
     )
 
 
-def insert_contacts(cursor, items, last_run_timestamp_unix):
+def insert_contacts(logger, cursor, items, last_run_timestamp_unix):
     """Insert of update contacts based on the items provided."""
-    logger = start_loki("__insert_contacts__")
     added = 0
     updated = 0
     for item in items:
@@ -522,12 +515,10 @@ def insert_contacts(cursor, items, last_run_timestamp_unix):
     )
 
 
-def insert_customers(cursor, items, last_run_timestamp_unix):
+def insert_customers(logger, cursor, items, last_run_timestamp_unix):
     """Insert or update customers based on the items provided."""
-
     added = 0
     updated = 0
-    logger = start_loki("__insert_customers__")
     for item in items:
         # Check if the record exists and get the current updated_at value
         cursor.execute("SELECT updated_at FROM customers WHERE id = %s", (item["id"],))
@@ -639,14 +630,11 @@ def insert_customers(cursor, items, last_run_timestamp_unix):
     )
 
 
-def insert_comments(cursor, items, last_run_timestamp_unix):
+def insert_comments(logger, cursor, items, last_run_timestamp_unix):
     """Insert or update comments based on the items provided."""
-
     added = 0
     updated = 0
     comments_data = []
-
-    logger = start_loki("__insert_comments__")
 
     for item in items:
         comments_data.extend(item.get("comments", "[]"))
@@ -718,9 +706,8 @@ def insert_comments(cursor, items, last_run_timestamp_unix):
     return comments_data
 
 
-def insert_invoices(cursor, items, last_run_timestamp_unix):
+def insert_invoices(logger, cursor, items, last_run_timestamp_unix):
     """Insert or update invoices based on the items provided."""
-    logger = start_loki("__insert_invoices__")
     added = 0
     updated = 0
     for item in items:
@@ -826,9 +813,8 @@ def insert_invoices(cursor, items, last_run_timestamp_unix):
     )
 
 
-def insert_products(cursor, items):
+def insert_products(logger, cursor, items):
     """Insert or update products based on the items provided."""
-    logger = start_loki("__insert_products__")
     added = 0
     updated = 0
     for item in items:
