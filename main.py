@@ -42,7 +42,7 @@ def main():
         payments(logger, False, 14)
         tickets(logger, False, 14)
         products(logger, False)  # Always does a full run, small data set
-        # output(logger)
+        output(logger)
 
         logger.info(
             "----------END EVERY 5 MINS----------------",
