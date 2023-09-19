@@ -274,24 +274,3 @@ def create_products_table_if_not_exists(cursor):
         )
         """
     )
-
-
-def create_employee_output_table_if_not_exists(cursor):
-    """Create the employee_output db table if it doesn't already exist"""
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS employee_output (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            ticket_id INT,
-            comment_id INT,
-            employee_id INT,            
-            username VARCHAR(255),
-            repairs INT DEFAULT 0,
-            diagnostics INT DEFAULT 0,
-            quality_control INT DEFAULT 0,
-            quality_control_rejects INT DEFAULT 0,
-            quality_control_rejected_person VARCHAR(255),
-            datetime DATETIME
-        )
-        """
-    )
