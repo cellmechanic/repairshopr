@@ -4,7 +4,7 @@ import mysql.connector
 
 def rate_limit():
     """current rate limit setting"""
-    return 50 / 180
+    return 60 / 180
 
 
 def connect_to_db(config):
