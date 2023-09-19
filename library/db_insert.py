@@ -814,7 +814,6 @@ def insert_invoices(logger, cursor, items, last_run_timestamp_unix):
 
 
 def insert_products(logger, cursor, items):
-
     """Insert or update products based on the items provided."""
     added = 0
     updated = 0
@@ -952,4 +951,3 @@ def insert_products(logger, cursor, items):
         updated,
         extra={"tags": {"service": "insert_products", "finished": "yes"}},
     )
-

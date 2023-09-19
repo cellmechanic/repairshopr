@@ -22,7 +22,7 @@ def customers(logger, full_run=False):
     cursor, connection = connect_to_db(config)
     create_customer_table_if_not_exists(cursor)
 
-    # Start fetching contacts from page 1
+    # Start fetching customers from page 1
     current_page = 1
     total_pages = 0
     total_entries = 0
@@ -36,8 +36,8 @@ def customers(logger, full_run=False):
         total_entries = data["meta"]["total_entries"]
     else:
         logger.error(
-            "Error getting contact data",
-            extra={"tags": {"service": "contacts"}},
+            "Error getting customer data",
+            extra={"tags": {"service": "customers"}},
         )
 
     # Iterate through all the pages
@@ -48,12 +48,12 @@ def customers(logger, full_run=False):
             logger.info(
                 "Added in page # %s",
                 page,
-                extra={"tags": {"service": "contacts"}},
+                extra={"tags": {"service": "customers"}},
             )
         else:
             logger.error(
                 "Error getting contact data",
-                extra={"tags": {"service": "contacts"}},
+                extra={"tags": {"service": "customers"}},
             )
             break
         time.sleep(rate_limit())
@@ -61,12 +61,12 @@ def customers(logger, full_run=False):
     logger.info(
         "Received all data, %s page(s)",
         total_pages,
-        extra={"tags": {"service": "contacts"}},
+        extra={"tags": {"service": "customers"}},
     )
     logger.info(
         "Total rows in all_data: %s",
         len(all_data),
-        extra={"tags": {"service": "contacts"}},
+        extra={"tags": {"service": "customers"}},
     )
 
     insert_customers(logger, cursor, all_data, last_run_timestamp_unix)
@@ -90,19 +90,12 @@ def customers(logger, full_run=False):
             "All Good -- Customer API Rows: %s, DB Rows: %s",
             total_entries,
             db_rows,
-            extra={"tags": {"service": "contacts", "finished": "full"}},
+            extra={"tags": {"service": "customers", "finished": "full"}},
         )
-    elif db_rows == total_entries and not full_run:
-        logger.info(
-            "All Good -- Customer API Rows: %s, DB Rows: %s",
-            total_entries,
-            db_rows,
-            extra={"tags": {"service": "contacts", "finished": "yes"}},
-        )
-    else:
+    elif db_rows != total_entries:
         logger.error(
-            "Row Mismatch",
-            extra={"tags": {"service": "contacts"}},
+            "Row Mismatch in Customers",
+            extra={"tags": {"service": "customers", "error": "data validation"}},
         )
 
     connection.commit()
