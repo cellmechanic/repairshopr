@@ -5,10 +5,10 @@ from library.db_delete import move_deleted_lines_to_deleted_table
 from library.db_general import compare_id_sums, connect_to_db, rate_limit
 from library.db_insert import insert_invoice_lines
 import library.env_library as env_library
-from library.api_requests_library import (
+from library.api_requests import (
     get_invoice_lines,
 )
-from library.fix_date_time_library import rs_to_unix_timestamp
+from library.fix_date_time import rs_to_unix_timestamp
 from library.timestamp_files import update_last_ran, check_last_ran
 
 

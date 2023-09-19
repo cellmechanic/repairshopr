@@ -2,7 +2,7 @@
 
 import time
 from library import env_library
-from library.api_requests_library import get_products
+from library.api_requests import get_products
 from library.db_create import create_products_table_if_not_exists
 from library.db_delete import move_deleted_products_to_deleted_table
 from library.db_general import compare_id_sums, connect_to_db, rate_limit

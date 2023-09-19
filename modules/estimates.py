@@ -2,7 +2,7 @@
 import time
 
 from library import env_library
-from library.api_requests_library import get_estimates, get_date_for_header
+from library.api_requests import get_estimates, get_date_for_header
 from library.db_create import create_estimates_table_if_not_exists
 from library.db_delete import move_deleted_estimates_to_deleted_table
 from library.db_general import compare_id_sums, connect_to_db, rate_limit

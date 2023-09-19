@@ -1,7 +1,7 @@
 """DB insert functions"""
 import json
 from library.db_hash import compute_hash
-from library.fix_date_time_library import (
+from library.fix_date_time import (
     rs_to_unix_timestamp,
     format_date_fordb,
 )

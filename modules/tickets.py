@@ -1,7 +1,7 @@
 """ticket with parameterized lookback"""
 import time
 from library import env_library
-from library.api_requests_library import get_tickets
+from library.api_requests import get_tickets
 from library.db_create import (
     create_comments_table_if_not_exists,
     create_tickets_table_if_not_exists,

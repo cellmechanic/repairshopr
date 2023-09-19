@@ -1,7 +1,7 @@
 """Customer backup module"""
 import time
 from library import env_library
-from library.api_requests_library import get_customers
+from library.api_requests import get_customers
 from library.db_create import create_customer_table_if_not_exists
 from library.db_delete import move_deleted_customers_to_deleted_table
 from library.db_general import compare_id_sums, connect_to_db, rate_limit
