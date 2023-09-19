@@ -34,14 +34,14 @@ def main():
             extra={"tags": {"service": "main_frequent", "finished": "yes"}},
         )
 
-        contacts(logger)  # Always does full run, small data set
-        customers(logger)  # Always does a full run, small data set
+        contacts(logger, False)  # Always does full run, small data set
+        customers(logger, False)  # Always does a full run, small data set
         estimates(logger, False, 14)
-        invoice_lines(logger)
+        invoice_lines(logger, False)
         invoices(logger, False, 14)
         payments(logger, False, 14)
         tickets(logger, False, 14)
-        products(logger)  # Always does a full run, small data set
+        products(logger, False)  # Always does a full run, small data set
         # output(logger)
 
         logger.info(
@@ -57,14 +57,14 @@ def main():
             extra={"tags": {"service": "main_full", "finished": "full"}},
         )
 
-        contacts(logger)
-        customers(logger)
+        contacts(logger, True)
+        customers(logger, True)
         estimates(logger, True, 0)
         invoice_lines(logger, True)
         invoices(logger, True, 0)
         payments(logger, True, 0)
         tickets(logger, True, 0)
-        products(logger)
+        products(logger, True)
 
         logger.info(
             "---------END FULL RUN---------------",

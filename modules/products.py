@@ -9,7 +9,7 @@ from library.db_general import compare_id_sums, connect_to_db, rate_limit
 from library.db_insert import insert_products
 
 
-def products(logger):
+def products(logger, full_run=False):
     """main script for the products module"""
 
     # Database configurations
@@ -80,12 +80,19 @@ def products(logger):
         db_rows = result[0]
 
     # Check if total entries match the expected count
-    if db_rows == total_entries:
+    if db_rows == total_entries and full_run:
         logger.info(
             "All Good -- Product API Rows: %s, DB Rows: %s",
             total_entries,
             db_rows,
             extra={"tags": {"service": "products", "finished": "full"}},
+        )
+    elif db_rows == total_entries and not full_run:
+        logger.info(
+            "All Good -- Product API Rows: %s, DB Rows: %s",
+            total_entries,
+            db_rows,
+            extra={"tags": {"service": "products", "finished": "yes"}},
         )
     else:
         logger.error(

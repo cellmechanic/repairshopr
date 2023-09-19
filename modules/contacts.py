@@ -10,7 +10,7 @@ from library.api_requests_library import (
 )
 from library.timestamp_files import update_last_ran, check_last_ran
 
-def contacts(logger):
+def contacts(logger, full_run=False):
     """main script for the contact module"""
     # Load timestamp
     timestamp_folder = "last-runs"
@@ -41,7 +41,7 @@ def contacts(logger):
         )
 
     # Iterate through all the pages
-    for page in range(1, 3):
+    for page in range(1, total_pages + 1):
         data = get_contacts(logger, page)
         if data is not None:
             all_data.extend(data["contacts"])
@@ -88,18 +88,28 @@ def contacts(logger):
         db_rows = 0
 
     # Check if the total entries match the expected count
-    if db_rows == total_entries:
-        logger.info(
-            "All Good -- Contact API Rows: %s, DB Rows: %s",
-            total_entries,
-            db_rows,
-            extra={"tags": {"service": "contacts", "finished": "full"}},
-        )
+    if full_run:
+        if db_rows == total_entries:
+            logger.info(
+                "All Good -- Contact API Rows: %s, DB Rows: %s",
+                total_entries,
+                db_rows,
+                extra={"tags": {"service": "contacts", "finished": "yes"}},
+            )
+        else:
+            logger.error(
+                "Row Mismatch",
+                extra={"tags": {"service": "contacts"}},
+            )
     else:
-        logger.error(
-            "Row Mismatch",
-            extra={"tags": {"service": "contacts"}},
-        )
+        if db_rows == total_entries:
+            logger.info(
+                "All Good -- Contact API Rows: %s, DB Rows: %s",
+                total_entries,
+                db_rows,
+                extra={"tags": {"service": "contacts", "finished": "full"}},
+            )
+
 
     connection.commit()
     connection.close()

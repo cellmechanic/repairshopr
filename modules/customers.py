@@ -9,7 +9,7 @@ from library.db_insert import insert_customers
 from library.timestamp_files import check_last_ran, update_last_ran
 
 
-def customers(logger):
+def customers(logger, full_run=False):
     """main script for the customer module"""
 
     # Load timestamp
@@ -85,12 +85,19 @@ def customers(logger):
         db_rows = result[0]
 
     # Check if the total entries match the expected count
-    if db_rows == total_entries:
+    if db_rows == total_entries and full_run:
         logger.info(
             "All Good -- Customer API Rows: %s, DB Rows: %s",
             total_entries,
             db_rows,
             extra={"tags": {"service": "contacts", "finished": "full"}},
+        )
+    elif db_rows == total_entries and not full_run:
+        logger.info(
+            "All Good -- Customer API Rows: %s, DB Rows: %s",
+            total_entries,
+            db_rows,
+            extra={"tags": {"service": "contacts", "finished": "yes"}},
         )
     else:
         logger.error(

@@ -282,15 +282,16 @@ def create_employee_output_table_if_not_exists(cursor):
         """
         CREATE TABLE IF NOT EXISTS employee_output (
             id INT AUTO_INCREMENT PRIMARY KEY,
+            ticket_id INT,
+            comment_id INT,
+            employee_id INT,            
             username VARCHAR(255),
-            userid INT,
             repairs INT DEFAULT 0,
             diagnostics INT DEFAULT 0,
             quality_control INT DEFAULT 0,
             quality_control_rejects INT DEFAULT 0,
             quality_control_rejected_person VARCHAR(255),
-            datetime DATETIME,
-            notes TEXT
+            datetime DATETIME
         )
         """
     )
