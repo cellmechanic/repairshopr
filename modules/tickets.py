@@ -84,7 +84,7 @@ def tickets(logger, full_run=False, lookback_days=14):
 
     if full_run:
         # Get 1st Page, then check to make sure not null
-        data = get_tickets(current_page)
+        data = get_tickets(logger, current_page)
         if data is not None:
             total_pages = data["meta"]["total_pages"]
         else:
@@ -93,8 +93,8 @@ def tickets(logger, full_run=False, lookback_days=14):
                 extra={"tags": {"service": "tickets"}},
             )
 
-        for page in range(1, total_pages + 1):
-            data = get_tickets(page)
+        for page in range(1, 10):
+            data = get_tickets(logger, page)
             if data is not None:
                 all_data.extend(data["tickets"])
                 logger.info(
@@ -121,9 +121,9 @@ def tickets(logger, full_run=False, lookback_days=14):
             extra={"tags": {"service": "tickets"}},
         )
 
-        insert_tickets(logger, cursor, all_data, last_run_timestamp_unix)
+        insert_tickets(logger, cursor, all_data, 0)
         comments_data = insert_comments(
-            logger, cursor, all_data, last_run_timestamp_unix
+            logger, cursor, all_data, 0
         )
 
         # Check ID sums to see if any comment was deleted

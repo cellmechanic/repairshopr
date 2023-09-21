@@ -5,8 +5,10 @@ from library.db_general import connect_to_db
 from library.db_output import (
     create_employee_output_table_if_not_exists,
     get_comments_db,
+    get_intake_comments,
     get_output_comments,
-    insert_output_db,
+    insert_intake_comments,
+    insert_regex_comments,
 )
 
 
@@ -20,16 +22,15 @@ def output(logger):
 
     today = datetime.date.today()
 
-    query = """
-        SELECT id as comment_id, created_at, ticket_id, body, tech, user_id
-        FROM comments
-        WHERE DATE(created_at) >= %s"""
-
-    all_comments = get_comments_db(logger, cursor, query, today)
+    all_comments = get_comments_db(logger, cursor, today)
 
     output_comments = get_output_comments(logger, all_comments)
 
-    insert_output_db(logger, cursor, output_comments)
+    intake_comments = get_intake_comments(logger, cursor, all_comments)
+
+    insert_regex_comments(logger, cursor, output_comments)
+
+    insert_intake_comments(logger, cursor, intake_comments)
 
     connection.commit()
     connection.close()

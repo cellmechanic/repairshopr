@@ -3,6 +3,7 @@
 
 import re
 
+
 def create_employee_output_table_if_not_exists(cursor):
     """Create the employee_output db table if it doesn't already exist"""
     cursor.execute(
@@ -19,6 +20,8 @@ def create_employee_output_table_if_not_exists(cursor):
             quality_control INT DEFAULT 0,
             quality_control_rejects INT DEFAULT 0,
             quality_control_rejected_person VARCHAR(255),
+            intake INT DEFAULT 0,
+            invoices INT DEFAULT 0,
             datetime DATETIME,
             notes TEXT DEFAULT NULL
         )
@@ -26,15 +29,35 @@ def create_employee_output_table_if_not_exists(cursor):
     )
 
 
-def get_comments_db(logger, cursor, query, date):
+def get_comments_db(logger, cursor, date):
     """Get comments from DB"""
+    query = """
+    SELECT id as comment_id, created_at, ticket_id, subject, body, tech, user_id
+    FROM comments
+    WHERE DATE(created_at) >= %s"""
+
     cursor.execute(query, (date,))
     logger.info(
         "Number of comments in DB: %s",
         cursor.rowcount,
         extra={"tags": {"service": "output comments"}},
     )
-    return cursor.fetchall()
+
+    comments_data = cursor.fetchall()
+    comments_list = [
+        {
+            "comment_id": record[0],
+            "created_at": record[1],
+            "ticket_id": record[2],
+            "subject": record[3],
+            "body": record[4],
+            "tech": record[5],
+            "user_id": record[6],
+        }
+        for record in comments_data
+    ]
+
+    return comments_list
 
 
 def get_output_comments(logger, all_comments):
@@ -48,7 +71,14 @@ def get_output_comments(logger, all_comments):
         )
 
     if all_comments is not None:
-        for comment_id, created_at, ticket_id, body, tech, user_id in all_comments:
+        for comment in all_comments:
+            comment_id = comment["comment_id"]
+            created_at = comment["created_at"]
+            ticket_id = comment["ticket_id"]
+            subject = comment["subject"]
+            body = comment["body"]
+            tech = comment["tech"]
+            user_id = comment["user_id"]
             matches = re.findall(r"\[(.*?)\]", body)
 
             for match in matches:
@@ -57,6 +87,7 @@ def get_output_comments(logger, all_comments):
                         "comment_id": comment_id,
                         "created_at": created_at,
                         "ticket_id": ticket_id,
+                        "subject": subject,
                         "body": match,
                         "tech": tech,
                         "user_id": user_id,
@@ -72,7 +103,50 @@ def get_output_comments(logger, all_comments):
     return production_comments
 
 
-def insert_output_db(logger, cursor, data):
+def get_intake_comments(logger, cursor, all_comments):
+    """Process all the comments and extract intake ones"""
+    checked_in_comments = []
+
+    if all_comments is None:
+        logger.warning(
+        "No comments found in DB",
+        extra={"tags": {"service": "output comments"}},
+    )
+
+    if all_comments is not None:
+        for comment in all_comments:
+            if comment.get("subject") == "Initial Issue":
+                ticket_id = comment.get("ticket_id")
+                if ticket_id:
+                    cursor.execute(
+                        "SELECT num_devices FROM tickets WHERE id = %s", (ticket_id,)
+                    )
+                    result = cursor.fetchone()
+                    if result:
+                        num_devices = result[0]
+                        checked_in_comments.append(
+                            {
+                                "comment_id": comment.get("comment_id"),
+                                "created_at": comment.get("created_at"),
+                                "ticket_id": ticket_id,
+                                "subject": comment.get("subject"),
+                                "num_devices": num_devices,
+                                "user_id": comment.get("user_id"),
+                                "tech": comment.get("tech"),
+                                "body": comment.get("body"),
+                            }
+                        )
+
+    logger.info(
+        "Number of potential intake comments: %s",
+        len(checked_in_comments),
+        extra={"tags": {"service": "output comments"}},
+    )
+
+    return checked_in_comments
+
+
+def insert_regex_comments(logger, cursor, data):
     """Insert employee output data into DB"""
     for comment in data:
         production_info = comment["body"]
@@ -84,56 +158,33 @@ def insert_output_db(logger, cursor, data):
             else:
                 count = 0
                 logger.error(
-                    "Production data with no number on ticket %s",
+                    "Production data with no number on ticket"
+                    " https://cellmechanic.repairshopr.com/tickets/%s",
                     comment["ticket_id"],
                     extra={"tags": {"output errors": "no number"}},
                 )
+            # In case of bad data, set defaults null
             quality_control_rejected_person = ""
+            repairs = 0
+            board_repair = 0
+            diagnostics = 0
+            quality_control = 0
+            quality_control_rejects = 0
+
             if job_type.lower() == "r":
                 repairs = count
-                board_repair = 0
-                diagnostics = 0
-                quality_control = 0
-                quality_control_rejects = 0
-                quality_control_rejected_person = ""
             elif job_type.lower() == "br":
-                repairs = 0
                 board_repair = count
-                diagnostics = 0
-                quality_control = 0
-                quality_control_rejects = 0
-                quality_control_rejected_person = ""
             elif job_type.lower() == "d":
-                repairs = 0
-                board_repair = 0
                 diagnostics = count
-                quality_control = 0
-                quality_control_rejects = 0
-                quality_control_rejected_person = ""
             elif job_type.lower() == "qc":
-                repairs = 0
-                board_repair = 0
-                diagnostics = 0
                 quality_control = count
-                quality_control_rejects = 0
-                quality_control_rejected_person = ""
             elif job_type.lower() == "qcr":
-                repairs = 0
-                board_repair = 0
-                diagnostics = 0
-                quality_control = 0
                 quality_control_rejects = count
                 # Extract the employee name from qcr entries
                 employee_name = parts[1].strip().split(":")
                 if len(employee_name) == 2:
                     quality_control_rejected_person = employee_name[1]
-            else:  # in case there's bad data
-                repairs = 0
-                board_repair = 0
-                diagnostics = 0
-                quality_control = 0
-                quality_control_rejects = 0
-                quality_control_rejected_person = ""
 
             # Insert data into the employee_output table
             query = """
@@ -155,3 +206,21 @@ def insert_output_db(logger, cursor, data):
                 comment["created_at"],
             )
             cursor.execute(query, values)
+
+def insert_intake_comments(logger, cursor, intake_comments):
+    """Insert intake comments into DB"""
+    for comment in intake_comments:
+        query = """
+            INSERT IGNORE INTO employee_output
+            (ticket_id, comment_id, employee_id, username, intake, datetime)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        values = (
+            comment["ticket_id"],
+            comment["comment_id"],
+            comment["user_id"],
+            comment["tech"],
+            comment["num_devices"],
+            comment["created_at"],
+        )
+        cursor.execute(query, values)

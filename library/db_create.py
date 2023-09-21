@@ -186,7 +186,8 @@ def create_tickets_table_if_not_exists(cursor):
             updated_at DATETIME,
             pdf_url TEXT,
             priority VARCHAR(255),
-            comments TEXT
+            comments TEXT,
+            num_devices INT
         )
         """
     )
@@ -273,4 +274,15 @@ def create_products_table_if_not_exists(cursor):
             hash VARCHAR(32)
         )
         """
+    )
+
+
+def create_users_table_if_not_exists(cursor):
+    """Create the users db table if it doesn't already exist"""
+    cursor.execute(
+        """ 
+        CREATE TABLE IF NOT EXISTS users (
+            ID INT PRIMARY KEY,
+            name VARCHAR(255)
+            )"""
     )

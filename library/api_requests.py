@@ -366,6 +366,35 @@ def get_products(logger, page, max_retries=3, retry_delay=30):
     return None
 
 
+def get_users(logger):
+    """api request for users"""
+    url = "https://cellmechanic.repairshopr.com/api/v1/users"
+    headers = {
+        "Authorization": f"Bearer {env_library.api_key_tickets}"
+    }  # doesn't have perms using random key
+
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+
+        if response.status_code != 200:
+            logger.error(
+                "Error fetching users: %s",
+                response.text,
+                extra={"tags": {"service": "users", "error": "non 200"}},
+            )
+            return None
+
+        return response.json()
+
+    except requests.RequestException as error:
+        logger.error(
+            "Error fetching users: %s",
+            str(error),
+            extra={"tags": {"service": "users"}},
+        )
+        return None
+
+
 def get_date_for_header(look_back):
     """Get date for header"""
     date_before = datetime.now() - timedelta(days=look_back)

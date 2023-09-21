@@ -1,4 +1,5 @@
 """General DB utilities"""
+import re
 import mysql.connector
 
 
@@ -266,3 +267,16 @@ def compare_id_sums(logger, cursor, data, table_name):
             )
 
         return sum_of_ids_api == products_sum
+
+
+def extract_devices(subject):
+    """Use the regex to extract the devices from the subject"""
+
+    pattern = r"\((\d+)\)"
+
+    match = re.search(pattern, subject)
+
+    if match:
+        return int(match.group(1))
+    else:
+        return 1

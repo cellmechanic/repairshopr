@@ -1,5 +1,6 @@
 """DB insert functions"""
 import json
+from library.db_general import extract_devices
 from library.db_hash import compute_hash
 from library.fix_date_time import (
     rs_to_unix_timestamp,
@@ -142,7 +143,8 @@ def insert_tickets(logger, cursor, items, last_run_timestamp_unix):
                         updated_at = %s,
                         pdf_url = %s,
                         priority = %s,
-                        comments = %s
+                        comments = %s,
+                        num_devices = %s
                     WHERE id = %s
                 """
                 values = (
@@ -166,6 +168,7 @@ def insert_tickets(logger, cursor, items, last_run_timestamp_unix):
                     item["priority"],
                     json.dumps(item.get("comments", {})),
                     item["id"],
+                    extract_devices(item["subject"]),
                 )
                 cursor.execute(sql, values)
         else:
@@ -176,8 +179,8 @@ def insert_tickets(logger, cursor, items, last_run_timestamp_unix):
                     id, number, subject, created_at, customer_id, 
                     customer_business_then_name, due_date, resolved_at, start_at,
                     end_at, location_id, problem_type, status, ticket_type_id,
-                    properties, user_id, updated_at, pdf_url, priority, comments
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    properties, user_id, updated_at, pdf_url, priority, comments, num_devices
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             values = (
                 item["id"],
@@ -200,6 +203,7 @@ def insert_tickets(logger, cursor, items, last_run_timestamp_unix):
                 item["pdf_url"],
                 item["priority"],
                 json.dumps(item.get("comments", {})),
+                extract_devices(item["subject"])
             )
             cursor.execute(sql, values)
 
@@ -950,4 +954,33 @@ def insert_products(logger, cursor, items):
         added,
         updated,
         extra={"tags": {"service": "insert_products", "finished": "yes"}},
+    )
+
+
+def insert_users(logger, cursor, items):
+    """Insert or update users based on the items provided."""
+    added = 0
+
+    user_list = items.get("users", [])
+
+    for item in user_list:
+        # Check if the user exists
+        user_id = item[0]
+        user_name = item[1]
+        cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+        existing_record = cursor.fetchone()
+        if not existing_record:
+            added += 1
+            sql = """
+                INSERT INTO users (id, name) VALUES (%s, %s)"""
+            values = (
+                user_id,
+                user_name,
+            )
+            cursor.execute(sql, values)
+
+    logger.info(
+        "Added %s new users.",
+        added,
+        extra={"tags": {"service": "insert_users", "finished": "yes"}},
     )

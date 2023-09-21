@@ -1,6 +1,7 @@
 """ main script for the frequent modules """
 import argparse
 from library.loki_library import start_loki
+from modules.users import users
 from modules.customers import customers
 from modules.invoices import invoices
 from modules.estimates import estimates
@@ -34,14 +35,15 @@ def main():
             extra={"tags": {"service": "main_frequent", "finished": "yes"}},
         )
 
-        contacts(logger, False)  # Always does full run, small data set
-        customers(logger, False)  # Always does a full run, small data set
+        contacts(logger, False)
+        customers(logger, False)
         estimates(logger, False, 14)
         invoice_lines(logger, False)
         invoices(logger, False, 14)
         payments(logger, False, 14)
         tickets(logger, False, 14)
-        products(logger, False)  # Always does a full run, small data set
+        products(logger, False)
+        users(logger)
         output(logger)
 
         logger.info(
