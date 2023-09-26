@@ -147,10 +147,11 @@ def insert_tickets(logger, cursor, items):
                         priority = '{item['priority']}',
                         comments = '{json.dumps(item.get('comments', {}))}',
                         num_devices = '{extract_devices(item['subject'])}',
-                    WHERE id = %s"""
+                    WHERE id = '{item['id']}'"""
 
                 logger.info(
-                    "Ticket %s is being updated, resolved_at: %s, updated: %s, db timestamp: %s compare value %s",
+                    "Ticket %s is being updated, resolved_at: %s, "
+                    "updated: %s, db timestamp: %s compare value %s",
                     item["number"],
                     item["resolved_at"],
                     rs_to_unix_timestamp(item["updated_at"]),
@@ -158,6 +159,13 @@ def insert_tickets(logger, cursor, items):
                     rs_to_unix_timestamp(item["updated_at"]) >= existing_record[0],
                     extra={"tags": {"service": "ticket watch"}},
                 )
+                try:
+                    cursor.execute(sql)
+                except ValueError as error:
+                    logger.info(
+                        f"not working sql: {error}",
+                        extra={"tags": {"service": "ticket watch"}},
+                    )
         else:
             # If record doesn't exist, insert it
             added += 1
