@@ -162,9 +162,9 @@ def insert_tickets(logger, cursor, items):
                 )
                 try:
                     cursor.execute(sql)
-                except ValueError as error:
+                except:
                     logger.info(
-                        f"not working sql: {error}",
+                        f"not working sql",
                         extra={"tags": {"service": "ticket watch"}},
                     )
         else:
