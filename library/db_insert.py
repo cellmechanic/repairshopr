@@ -173,6 +173,12 @@ def insert_tickets(logger, cursor, items, last_run_timestamp_unix):
                     extract_devices(item["subject"]),
                 )
                 cursor.execute(sql, values)
+                logger.info(
+                    "Ticket %s is being updated, resolved_at: %s",
+                    item["id"],
+                    item["resolved_at"],
+                    extra={"tags": {"service": "ticket watch"}},
+                )
         else:
             # If record doesn't exist, insert it
             added += 1
