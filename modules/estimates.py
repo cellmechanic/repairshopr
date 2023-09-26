@@ -23,11 +23,6 @@ def estimates(logger, full_run=False, lookback_days=365):
     total_pages = 0
     all_data = []
 
-    # Load timestamp
-    timestamp_folder = "last-runs"
-    timestamp_file = f"{timestamp_folder}/last_run_estimates.txt"
-    last_run_timestamp_unix = check_last_ran(timestamp_file)
-
     if not full_run:
         # Get 1st Page, then check to make sure not null
         data = get_estimates(logger, current_page)
@@ -82,7 +77,7 @@ def estimates(logger, full_run=False, lookback_days=365):
             extra={"tags": {"service": "estimates"}},
         )
 
-        insert_estimates(logger, cursor, all_data, last_run_timestamp_unix)
+        insert_estimates(logger, cursor, all_data)
 
     if full_run:
         data = get_estimates(logger, current_page)
@@ -120,12 +115,14 @@ def estimates(logger, full_run=False, lookback_days=365):
             extra={"tags": {"service": "estimates"}},
         )
 
-        insert_estimates(logger, cursor, all_data, last_run_timestamp_unix)
+        insert_estimates(logger, cursor, all_data)
 
         deleted = compare_id_sums(logger, cursor, all_data, "estimates")
 
         if not deleted:
-            move_deleted_estimates_to_deleted_table(logger, cursor, connection, all_data)
+            move_deleted_estimates_to_deleted_table(
+                logger, cursor, connection, all_data
+            )
 
         # Validate data / totals
         query = "SELECT COUNT(*) FROM estimates"
@@ -154,4 +151,3 @@ def estimates(logger, full_run=False, lookback_days=365):
 
     connection.commit()
     connection.close()
-    update_last_ran(timestamp_file)

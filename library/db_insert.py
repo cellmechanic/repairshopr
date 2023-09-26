@@ -1,3 +1,4 @@
+#! /usr/bin/env python # pylint: disable=C0302
 """DB insert functions"""
 import json
 from library.db_general import extract_devices
@@ -6,9 +7,10 @@ from library.fix_date_time import (
     rs_to_unix_timestamp,
     format_date_fordb,
 )
+from library.volume_library import insert_volume
 
 
-def insert_invoice_lines(logger, cursor, items, last_run_timestamp_unix):
+def insert_invoice_lines(logger, cursor, items):
     """insert invoice lines"""
     added = 0
     updated = 0
@@ -21,7 +23,9 @@ def insert_invoice_lines(logger, cursor, items, last_run_timestamp_unix):
         existing_record = cursor.fetchone()
 
         if existing_record:
-            if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
+            if rs_to_unix_timestamp(item["updated_at"]) > rs_to_unix_timestamp(
+                existing_record[0]
+            ):
                 # If record exists and updated_at is greater, update it
                 logger.info(
                     "Line item %s has been updated since last run.",
@@ -101,6 +105,11 @@ def insert_invoice_lines(logger, cursor, items, last_run_timestamp_unix):
                 extra={"tags": {"service": "invoice_lines"}},
             )
             cursor.execute(sql, values)
+
+    if added > 0 or updated > 0:
+        insert_volume(
+            cursor, logger, new=added, updated=updated, table_name="line_items"
+        )
 
     logger.info(
         "Added %s new line items, updated %s existing line items.",
@@ -216,6 +225,9 @@ def insert_tickets(logger, cursor, items):
             )
             cursor.execute(sql, values)
 
+    if added > 0 or updated > 0:
+        insert_volume(cursor, logger, new=added, updated=updated, table_name="tickets")
+
     logger.info(
         "Added %s new tickets, updated %s existing tickets.",
         added,
@@ -224,7 +236,7 @@ def insert_tickets(logger, cursor, items):
     )
 
 
-def insert_estimates(logger, cursor, items, last_run_timestamp_unix):
+def insert_estimates(logger, cursor, items):
     """Insert or update estimates based on the items provided."""
     added = 0
     updated = 0
@@ -234,7 +246,9 @@ def insert_estimates(logger, cursor, items, last_run_timestamp_unix):
         existing_record = cursor.fetchone()
 
         if existing_record:
-            if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
+            if rs_to_unix_timestamp(item["updated_at"]) > rs_to_unix_timestamp(
+                existing_record[0]
+            ):
                 # If record exists and updated_at is greater, update it
                 updated += 1
                 sql = """
@@ -305,6 +319,11 @@ def insert_estimates(logger, cursor, items, last_run_timestamp_unix):
             )
             cursor.execute(sql, values)
 
+    if added > 0 or updated > 0:
+        insert_volume(
+            cursor, logger, new=added, updated=updated, table_name="estimates"
+        )
+
     logger.info(
         "Added %s new estimates, updated %s existing estimates.",
         added,
@@ -328,7 +347,9 @@ def insert_payments(logger, cursor, items):
         existing_record = cursor.fetchone()
 
         if existing_record:
-            if rs_to_unix_timestamp(item["updated_at"]) > rs_to_unix_timestamp(existing_record[0]):
+            if rs_to_unix_timestamp(item["updated_at"]) > rs_to_unix_timestamp(
+                existing_record[0]
+            ):
                 # If record exists and updated_at is greater, update it
                 updated += 1
                 sql = """
@@ -393,6 +414,9 @@ def insert_payments(logger, cursor, items):
             )
             cursor.execute(sql, values)
 
+    if added > 0 or updated > 0:
+        insert_volume(cursor, logger, new=added, updated=updated, table_name="payments")
+
     logger.info(
         "Added %s new payments, updated %s existing payments.",
         added,
@@ -401,7 +425,7 @@ def insert_payments(logger, cursor, items):
     )
 
 
-def insert_contacts(logger, cursor, items, last_run_timestamp_unix):
+def insert_contacts(logger, cursor, items):
     """Insert of update contacts based on the items provided."""
     added = 0
     updated = 0
@@ -410,7 +434,9 @@ def insert_contacts(logger, cursor, items, last_run_timestamp_unix):
         cursor.execute("SELECT updated_at FROM contacts WHERE id = %s", (item["id"],))
         existing_record = cursor.fetchone()
         if existing_record:
-            if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
+            if rs_to_unix_timestamp(item["updated_at"]) > rs_to_unix_timestamp(
+                existing_record[0]
+            ):
                 logger.info(
                     "Contact %s has been updated since last run.",
                     item["name"],
@@ -520,6 +546,10 @@ def insert_contacts(logger, cursor, items, last_run_timestamp_unix):
                 item["ticket_matching_emails"],
             )
             cursor.execute(sql, values)
+
+    if added > 0 or updated > 0:
+        insert_volume(cursor, logger, new=added, updated=updated, table_name="contacts")
+
     logger.info(
         "Added %s new contacts, updated %s existing contacts.",
         added,
@@ -528,7 +558,7 @@ def insert_contacts(logger, cursor, items, last_run_timestamp_unix):
     )
 
 
-def insert_customers(logger, cursor, items, last_run_timestamp_unix):
+def insert_customers(logger, cursor, items):
     """Insert or update customers based on the items provided."""
     added = 0
     updated = 0
@@ -537,7 +567,9 @@ def insert_customers(logger, cursor, items, last_run_timestamp_unix):
         cursor.execute("SELECT updated_at FROM customers WHERE id = %s", (item["id"],))
         existing_record = cursor.fetchone()
         if existing_record:
-            if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
+            if rs_to_unix_timestamp(item["updated_at"]) > rs_to_unix_timestamp(
+                existing_record[0]
+            ):
                 updated += 1
                 sql = """
                     UPDATE customers SET 
@@ -635,6 +667,12 @@ def insert_customers(logger, cursor, items, last_run_timestamp_unix):
                 item["referred_by"],
             )
             cursor.execute(sql, values)
+
+    if added > 0 or updated > 0:
+        insert_volume(
+            cursor, logger, new=added, updated=updated, table_name="customers"
+        )
+
     logger.info(
         "Added %s new customers, updated %s existing customers.",
         added,
@@ -643,7 +681,7 @@ def insert_customers(logger, cursor, items, last_run_timestamp_unix):
     )
 
 
-def insert_comments(logger, cursor, items, last_run_timestamp_unix):
+def insert_comments(logger, cursor, items):
     """Insert or update comments based on the items provided."""
     added = 0
     updated = 0
@@ -661,7 +699,9 @@ def insert_comments(logger, cursor, items, last_run_timestamp_unix):
         ticket_id = comment["ticket_id"]
 
         if existing_comment:
-            if rs_to_unix_timestamp(comment["updated_at"]) > last_run_timestamp_unix:
+            if rs_to_unix_timestamp(comment["updated_at"]) > rs_to_unix_timestamp(
+                existing_comment[0]
+            ):
                 # If comment exists and updated_at is greater, update it
                 updated += 1
                 sql = """
@@ -710,6 +750,9 @@ def insert_comments(logger, cursor, items, last_run_timestamp_unix):
             )
             cursor.execute(sql, values)
 
+    if added > 0 or updated > 0:
+        insert_volume(cursor, logger, new=added, updated=updated, table_name="comments")
+
     logger.info(
         "Added %s new comments, updated %s existing comments.",
         added,
@@ -719,7 +762,7 @@ def insert_comments(logger, cursor, items, last_run_timestamp_unix):
     return comments_data
 
 
-def insert_invoices(logger, cursor, items, last_run_timestamp_unix):
+def insert_invoices(logger, cursor, items):
     """Insert or update invoices based on the items provided."""
     added = 0
     updated = 0
@@ -729,7 +772,9 @@ def insert_invoices(logger, cursor, items, last_run_timestamp_unix):
         existing_record = cursor.fetchone()
 
         if existing_record:
-            if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
+            if rs_to_unix_timestamp(item["updated_at"]) > rs_to_unix_timestamp(
+                existing_record[0]
+            ):
                 # If record exists and updated_at is greater, update it
                 updated += 1
                 sql = """
@@ -817,6 +862,9 @@ def insert_invoices(logger, cursor, items, last_run_timestamp_unix):
                 item["hardwarecost"],
             )
             cursor.execute(sql, values)
+
+    if added > 0 or updated > 0:
+        insert_volume(cursor, logger, new=added, updated=updated, table_name="invoices")
 
     logger.info(
         "Added %s new invoices, updated %s existing invoices.",
@@ -958,6 +1006,9 @@ def insert_products(logger, cursor, items):
             )
             cursor.execute(sql, values)
 
+    if added > 0 or updated > 0:
+        insert_volume(cursor, logger, new=added, updated=updated, table_name="products")
+
     logger.info(
         "Added %s new products, updated %s existing products.",
         added,
@@ -987,6 +1038,9 @@ def insert_users(logger, cursor, items):
                 user_name,
             )
             cursor.execute(sql, values)
+
+    if added > 0:
+        insert_volume(cursor, logger, new=added, table_name="users")
 
     logger.info(
         "Added %s new users.",

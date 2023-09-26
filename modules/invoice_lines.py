@@ -89,7 +89,7 @@ def invoice_lines(logger, full_run=False):
             len(all_data),
             extra={"tags": {"service": "invoice_lines"}},
         )
-        insert_invoice_lines(logger, cursor, all_data, last_run_timestamp_unix)
+        insert_invoice_lines(logger, cursor, all_data)
 
     if full_run:
         data = get_invoice_lines(logger, current_page)
@@ -129,7 +129,7 @@ def invoice_lines(logger, full_run=False):
             extra={"tags": {"service": "invoice_lines"}},
         )
 
-        insert_invoice_lines(logger, cursor, all_data, last_run_timestamp_unix)
+        insert_invoice_lines(logger, cursor, all_data)
 
         deleted = compare_id_sums(logger, cursor, all_data, "invoice_items")
 

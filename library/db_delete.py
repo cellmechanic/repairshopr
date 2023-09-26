@@ -574,7 +574,6 @@ def move_deleted_comments_to_deleted_table(logger, cursor, connection, data):
                 # Delete the row from the comments table
                 cursor.execute("DELETE FROM comments WHERE id = %s", (db_id,))
                 deleted += 1
-                
 
         logger.warning(
             "Deleted %s comment(s).",
@@ -602,6 +601,7 @@ def move_deleted_comments_to_deleted_table(logger, cursor, connection, data):
             extra={"tags": {"service": "move_deleted_comments_to_deleted_table"}},
         )
     connection.commit()
+
 
 def move_deleted_estimates_to_deleted_table(logger, cursor, connection, data):
     """Compare the id sums, and move any entries not

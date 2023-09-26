@@ -8,15 +8,9 @@ import library.env_library as env_library
 from library.api_requests import (
     get_contacts,
 )
-from library.timestamp_files import update_last_ran, check_last_ran
-
 
 def contacts(logger, full_run=False):
     """main script for the contact module"""
-    # Load timestamp
-    timestamp_folder = "last-runs"
-    timestamp_file = f"{timestamp_folder}/last_run_contacts.txt"
-    last_run_timestamp_unix = check_last_ran(timestamp_file)
 
     # Database configurations
     config = env_library.config
@@ -71,7 +65,7 @@ def contacts(logger, full_run=False):
         extra={"tags": {"service": "contacts"}},
     )
 
-    insert_contacts(logger, cursor, all_data, last_run_timestamp_unix)
+    insert_contacts(logger, cursor, all_data)
 
     # Check ID sums to see if anything was deleted
     deleted = compare_id_sums(logger, cursor, all_data, "contacts")
@@ -104,4 +98,3 @@ def contacts(logger, full_run=False):
 
     connection.commit()
     connection.close()
-    update_last_ran(timestamp_file)

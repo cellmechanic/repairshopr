@@ -12,15 +12,9 @@ from library.db_delete import (
 )
 from library.db_general import compare_id_sums, connect_to_db, rate_limit
 from library.db_insert import insert_comments, insert_tickets
-from library.timestamp_files import check_last_ran, update_last_ran
-
 
 def tickets(logger, full_run=False, lookback_days=14):
     """main script for the ticket module"""
-    # Load timestamp
-    timestamp_folder = "last-runs"
-    timestamp_file = f"{timestamp_folder}/last_run_tickets_days.txt"
-    last_run_timestamp_unix = check_last_ran(timestamp_file)
 
     # Database configurations
     config = env_library.config
@@ -80,7 +74,7 @@ def tickets(logger, full_run=False, lookback_days=14):
         )
 
         insert_tickets(logger, cursor, all_data)
-        insert_comments(logger, cursor, all_data, last_run_timestamp_unix)
+        insert_comments(logger, cursor, all_data)
 
     if full_run:
         # Get 1st Page, then check to make sure not null
@@ -122,7 +116,7 @@ def tickets(logger, full_run=False, lookback_days=14):
         )
 
         insert_tickets(logger, cursor, all_data)
-        comments_data = insert_comments(logger, cursor, all_data, 0)
+        comments_data = insert_comments(logger, cursor, all_data)
 
         # Check ID sums to see if any comment was deleted
         deleted = compare_id_sums(logger, cursor, comments_data, "comments")
@@ -188,4 +182,3 @@ def tickets(logger, full_run=False, lookback_days=14):
 
     connection.commit()
     connection.close()
-    update_last_ran(timestamp_file)

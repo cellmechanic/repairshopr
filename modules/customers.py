@@ -6,16 +6,10 @@ from library.db_create import create_customer_table_if_not_exists
 from library.db_delete import move_deleted_customers_to_deleted_table
 from library.db_general import compare_id_sums, connect_to_db, rate_limit
 from library.db_insert import insert_customers
-from library.timestamp_files import check_last_ran, update_last_ran
 
 
 def customers(logger, full_run=False):
     """main script for the customer module"""
-
-    # Load timestamp
-    timestamp_folder = "last-runs"
-    timestamp_file = f"{timestamp_folder}/last_run_customers.txt"
-    last_run_timestamp_unix = check_last_ran(timestamp_file)
 
     # Database configurations
     config = env_library.config
@@ -69,7 +63,7 @@ def customers(logger, full_run=False):
         extra={"tags": {"service": "customers"}},
     )
 
-    insert_customers(logger, cursor, all_data, last_run_timestamp_unix)
+    insert_customers(logger, cursor, all_data)
 
     # Check ID sums to see if anything was deleted
     deleted = compare_id_sums(logger, cursor, all_data, "customers")
@@ -100,4 +94,3 @@ def customers(logger, full_run=False):
 
     connection.commit()
     connection.close()
-    update_last_ran(timestamp_file)
