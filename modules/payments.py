@@ -7,8 +7,6 @@ from library.db_create import create_payments_table_if_not_exists
 from library.db_delete import move_deleted_payments_to_deleted_table
 from library.db_general import compare_id_sums, connect_to_db, rate_limit
 from library.db_insert import insert_payments
-from library.timestamp_files import check_last_ran, update_last_ran
-
 
 def payments(logger, full_run=False, lookback_days=14):
     """main function to get payments data"""
@@ -22,11 +20,6 @@ def payments(logger, full_run=False, lookback_days=14):
     current_page = 1
     total_pages = 0
     all_data = []
-
-    # Load timestamp
-    timestamp_folder = "last-runs"
-    timestamp_file = f"{timestamp_folder}/last_run_payments.txt"
-    last_run_timestamp_unix = check_last_ran(timestamp_file)
 
     if not full_run:
         # Get 1st Page, then check to make sure not null
@@ -80,7 +73,7 @@ def payments(logger, full_run=False, lookback_days=14):
                 extra={"tags": {"service": "payments"}},
             )
 
-        insert_payments(logger, cursor, all_data, last_run_timestamp_unix)
+        insert_payments(logger, cursor, all_data)
 
     if full_run:
         data = get_payments(logger, current_page)
@@ -118,7 +111,7 @@ def payments(logger, full_run=False, lookback_days=14):
             extra={"tags": {"service": "payments"}},
         )
 
-        insert_payments(logger, cursor, all_data, last_run_timestamp_unix)
+        insert_payments(logger, cursor, all_data)
 
         deleted = compare_id_sums(logger, cursor, all_data, "payments")
         if not deleted:
@@ -151,4 +144,3 @@ def payments(logger, full_run=False, lookback_days=14):
 
     connection.commit()
     connection.close()
-    update_last_ran(timestamp_file)

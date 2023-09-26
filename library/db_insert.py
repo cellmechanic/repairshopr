@@ -313,7 +313,7 @@ def insert_estimates(logger, cursor, items, last_run_timestamp_unix):
     )
 
 
-def insert_payments(logger, cursor, items, last_run_timestamp_unix):
+def insert_payments(logger, cursor, items):
     """Insert or update payments based on the items provided."""
     added = 0
     updated = 0
@@ -328,7 +328,7 @@ def insert_payments(logger, cursor, items, last_run_timestamp_unix):
         existing_record = cursor.fetchone()
 
         if existing_record:
-            if rs_to_unix_timestamp(item["updated_at"]) > last_run_timestamp_unix:
+            if rs_to_unix_timestamp(item["updated_at"]) > rs_to_unix_timestamp(existing_record[0]):
                 # If record exists and updated_at is greater, update it
                 updated += 1
                 sql = """
