@@ -121,7 +121,7 @@ def insert_tickets(logger, cursor, items, last_run_timestamp_unix):
         existing_record = cursor.fetchone()
         if existing_record:
             api_update = rs_to_unix_timestamp(item["updated_at"])
-            db_update = rs_to_unix_timestamp(existing_record[0])
+            db_update = existing_record[0].timestamp()
             if api_update >= db_update:
                 # If record exists and updated_at is greater, update it
                 updated += 1
