@@ -110,19 +110,17 @@ def insert_invoice_lines(logger, cursor, items, last_run_timestamp_unix):
     )
 
 
-def insert_tickets(logger, cursor, items, last_run_timestamp_unix):
+def insert_tickets(logger, cursor, items):
     """Insert or update tickets based on the items provided."""
     added = 0
     updated = 0
 
     for item in items:
         # Check if the record exists and get the current updated_at value
-        cursor.execute("SELECT updated_at FROM tickets WHERE id = %s", (item["id"],))
+        cursor.execute("SELECT updated_at_u FROM tickets WHERE id = %s", (item["id"],))
         existing_record = cursor.fetchone()
         if existing_record:
-            api_update = rs_to_unix_timestamp(item["updated_at"])
-            db_update = existing_record[0].timestamp()
-            if api_update >= db_update:
+            if rs_to_unix_timestamp(item["updated_at"]) >= existing_record[0]:
                 # If record exists and updated_at is greater, update it
                 updated += 1
                 sql = """
@@ -130,10 +128,12 @@ def insert_tickets(logger, cursor, items, last_run_timestamp_unix):
                         number = %s,
                         subject = %s,
                         created_at = %s,
+                        created_at_u = %s,
                         customer_id = %s,
                         customer_business_then_name = %s,
                         due_date = %s,
                         resolved_at = %s,
+                        resolved_at_u = %s,
                         start_at = %s,
                         end_at = %s,
                         location_id = %s,
@@ -143,6 +143,7 @@ def insert_tickets(logger, cursor, items, last_run_timestamp_unix):
                         properties = %s,
                         user_id = %s,
                         updated_at = %s,
+                        updated_at_u = %s,
                         pdf_url = %s,
                         priority = %s,
                         comments = %s,
@@ -153,12 +154,14 @@ def insert_tickets(logger, cursor, items, last_run_timestamp_unix):
                     item["number"],
                     item["subject"],
                     format_date_fordb(item["created_at"]),
+                    rs_to_unix_timestamp(item["created_at"]),
                     item["customer_id"],
                     item["customer_business_then_name"],
-                    format_date_fordb(item["due_date"]),
+                    rs_to_unix_timestamp(item["due_date"]),
                     format_date_fordb(item["resolved_at"]),
-                    item["start_at"],
-                    item["end_at"],
+                    rs_to_unix_timestamp(item["resolved_at"]),
+                    rs_to_unix_timestamp(item["start_at"]),
+                    rs_to_unix_timestamp(item["end_at"]),
                     item["location_id"],
                     item["problem_type"],
                     item["status"],
@@ -166,6 +169,7 @@ def insert_tickets(logger, cursor, items, last_run_timestamp_unix):
                     json.dumps(item.get("properties", {})),
                     item["user_id"],
                     format_date_fordb(item["updated_at"]),
+                    rs_to_unix_timestamp(item["updated_at"]),
                     item["pdf_url"],
                     item["priority"],
                     json.dumps(item.get("comments", {})),
@@ -184,23 +188,25 @@ def insert_tickets(logger, cursor, items, last_run_timestamp_unix):
             added += 1
             sql = """
                 INSERT INTO tickets (
-                    id, number, subject, created_at, customer_id, 
-                    customer_business_then_name, due_date, resolved_at, start_at,
+                    id, number, subject, created_at, created_at_u, customer_id, 
+                    customer_business_then_name, due_date, resolved_at, resolved_at_u, start_at,
                     end_at, location_id, problem_type, status, ticket_type_id,
-                    properties, user_id, updated_at, pdf_url, priority, comments, num_devices
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    properties, user_id, updated_at, updated_at_u, pdf_url, priority, comments, num_devices
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             values = (
                 item["id"],
                 item["number"],
                 item["subject"],
                 format_date_fordb(item["created_at"]),
+                rs_to_unix_timestamp(item["created_at"]),
                 item["customer_id"],
                 item["customer_business_then_name"],
-                format_date_fordb(item["due_date"]),
+                rs_to_unix_timestamp(item["due_date"]),
                 format_date_fordb(item["resolved_at"]),
-                item["start_at"],
-                item["end_at"],
+                rs_to_unix_timestamp(item["resolved_at"]),
+                rs_to_unix_timestamp(item["start_at"]),
+                rs_to_unix_timestamp(item["end_at"]),
                 item["location_id"],
                 item["problem_type"],
                 item["status"],
@@ -208,6 +214,7 @@ def insert_tickets(logger, cursor, items, last_run_timestamp_unix):
                 json.dumps(item.get("properties", {})),
                 item["user_id"],
                 format_date_fordb(item["updated_at"]),
+                rs_to_unix_timestamp(item["updated_at"]),
                 item["pdf_url"],
                 item["priority"],
                 json.dumps(item.get("comments", {})),

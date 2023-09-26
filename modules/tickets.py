@@ -79,7 +79,7 @@ def tickets(logger, full_run=False, lookback_days=14):
             extra={"tags": {"service": "tickets"}},
         )
 
-        insert_tickets(logger, cursor, all_data, last_run_timestamp_unix)
+        insert_tickets(logger, cursor, all_data)
         insert_comments(logger, cursor, all_data, last_run_timestamp_unix)
 
     if full_run:
@@ -121,10 +121,8 @@ def tickets(logger, full_run=False, lookback_days=14):
             extra={"tags": {"service": "tickets"}},
         )
 
-        insert_tickets(logger, cursor, all_data, 0)
-        comments_data = insert_comments(
-            logger, cursor, all_data, 0
-        )
+        insert_tickets(logger, cursor, all_data)
+        comments_data = insert_comments(logger, cursor, all_data, 0)
 
         # Check ID sums to see if any comment was deleted
         deleted = compare_id_sums(logger, cursor, comments_data, "comments")

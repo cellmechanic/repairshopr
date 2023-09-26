@@ -35,16 +35,16 @@ def main():
             extra={"tags": {"service": "main_frequent", "finished": "yes"}},
         )
 
-        # contacts(logger, False)
-        # customers(logger, False)
-        # estimates(logger, False, 14)
-        # invoice_lines(logger, False)
-        # invoices(logger, False, 14)
-        # payments(logger, False, 14)
-        tickets(logger, False, 1)
-        # products(logger, False)
-        # users(logger)
-        # output(logger)
+        contacts(logger, False)
+        customers(logger, False)
+        estimates(logger, False, 14)
+        invoice_lines(logger, False)
+        invoices(logger, False, 14)
+        payments(logger, False, 14)
+        tickets(logger, False, 14)
+        products(logger, False)
+        users(logger)
+        output(logger)
 
         logger.info(
             "----------END EVERY 5 MINS----------------",
@@ -59,14 +59,14 @@ def main():
             extra={"tags": {"service": "main_full", "finished": "full"}},
         )
 
-        contacts(logger, True)
-        customers(logger, True)
-        estimates(logger, True, 0)
-        invoice_lines(logger, True)
-        invoices(logger, True, 0)
-        payments(logger, True, 0)
+        # contacts(logger, True)
+        # customers(logger, True)
+        # estimates(logger, True, 0)
+        # invoice_lines(logger, True)
+        # invoices(logger, True, 0)
+        # payments(logger, True, 0)
         tickets(logger, True, 0)
-        products(logger, True)
+        # products(logger, True)
 
         logger.info(
             "---------END FULL RUN---------------",
