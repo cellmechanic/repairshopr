@@ -124,30 +124,31 @@ def insert_tickets(logger, cursor, items):
                 # If record exists and updated_at is greater, update it
                 updated += 1
                 sql = f"""UPDATE tickets SET
-                        number = '{item['number']}',
-                        subject = '{item['subject']}',
-                        created_at = '{format_date_fordb(item['created_at'])}',
-                        created_at_u = '{rs_to_unix_timestamp(item['created_at'])}',
-                        customer_id = '{item['customer_id']}',
-                        customer_business_then_name = '{item['customer_business_then_name']}',
-                        due_date = '{rs_to_unix_timestamp(item['due_date'])}',
-                        resolved_at = '{format_date_fordb(item['resolved_at'])}',
-                        resolved_at_u = '{rs_to_unix_timestamp(item['resolved_at'])}',
-                        start_at = '{rs_to_unix_timestamp(item['start_at'])}',
-                        end_at = '{rs_to_unix_timestamp(item['end_at'])}',
-                        location_id = '{item['location_id']}',
-                        problem_type = '{item['problem_type']}',
-                        status = '{item['status']}',
-                        ticket_type_id = '{item['ticket_type_id']}',
-                        properties = '{json.dumps(item.get('properties', {}))}',
-                        user_id = '{item['user_id']}',
-                        updated_at = '{format_date_fordb(item['updated_at'])}',
-                        updated_at_u = '{rs_to_unix_timestamp(item['updated_at'])}',
-                        pdf_url = '{item['pdf_url']}',
-                        priority = '{item['priority']}',
-                        comments = '{json.dumps(item.get('comments', {}))}',
-                        num_devices = '{extract_devices(item['subject'])}',
-                    WHERE id = '{item['id']}'"""
+                    number = {item['number']},
+                    subject = '{item['subject']}',
+                    created_at = '{format_date_fordb(item['created_at'])}',
+                    created_at_u = {rs_to_unix_timestamp(item['created_at'])},
+                    customer_id = {item['customer_id']},
+                    customer_business_then_name = '{item['customer_business_then_name']}',
+                    due_date = {rs_to_unix_timestamp(item['due_date'])},
+                    resolved_at = '{format_date_fordb(item['resolved_at'])}',
+                    resolved_at_u = {rs_to_unix_timestamp(item['resolved_at'])},
+                    start_at = {rs_to_unix_timestamp(item['start_at'])},
+                    end_at = {rs_to_unix_timestamp(item['end_at'])},
+                    location_id = {item['location_id']},
+                    problem_type = '{item['problem_type']}',
+                    status = '{item['status']}',
+                    ticket_type_id = {item['ticket_type_id']},
+                    properties = '{json.dumps(item.get('properties', {}))}',
+                    user_id = {item['user_id']},
+                    updated_at = '{format_date_fordb(item['updated_at'])}',
+                    updated_at_u = {rs_to_unix_timestamp(item['updated_at'])},
+                    pdf_url = '{item['pdf_url']}',
+                    priority = '{item['priority']}',
+                    comments = '{json.dumps(item.get('comments', {}))}',
+                    num_devices = {extract_devices(item['subject'])}
+                WHERE id = {item['id']}"""
+
 
                 logger.info(
                     "Ticket %s is being updated, resolved_at: %s, "
