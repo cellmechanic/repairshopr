@@ -151,7 +151,7 @@ def insert_tickets(logger, cursor, items):
 
                 logger.info(
                     "Ticket %s is being updated, resolved_at: %s, updated: %s, db timestamp: %s compare value %s",
-                    item["id"],
+                    item["number"],
                     item["resolved_at"],
                     rs_to_unix_timestamp(item["updated_at"]),
                     existing_record[0],
