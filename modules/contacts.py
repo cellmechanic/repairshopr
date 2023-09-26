@@ -67,33 +67,37 @@ def contacts(logger, full_run=False):
 
     insert_contacts(logger, cursor, all_data)
 
-    # Check ID sums to see if anything was deleted
-    deleted = compare_id_sums(logger, cursor, all_data, "contacts")
-
-    if not deleted:
-        move_deleted_contacts_to_deleted_table(logger, cursor, connection, all_data)
-
-    # Validate data / totals
-    query = "SELECT COUNT(*) FROM contacts"
-    cursor.execute(query)
-    result = cursor.fetchone()
-    if result is not None:
-        db_rows = result[0]
+    if len(all_data) == total_entries:
+        all_sourced = True
     else:
-        db_rows = 0
+        all_sourced = False
 
-    # Check if the total entries match the expected count
-    if db_rows == total_entries and full_run:
-        logger.info(
-            "All Good -- Contact API Rows: %s, DB Rows: %s",
-            total_entries,
-            db_rows,
-            extra={"tags": {"service": "contacts", "finished": "full"}},
-        )
-    elif db_rows != total_entries:
+    # Check ID sums to see if anything was deleted
+    if all_sourced:
+        deleted = compare_id_sums(logger, cursor, all_data, "contacts")
+        if not deleted:
+            move_deleted_contacts_to_deleted_table(logger, cursor, connection, all_data)
+        # Validate data / totals
+        query = "SELECT COUNT(*) FROM contacts"
+        cursor.execute(query)
+        result = cursor.fetchone()
+        if result is not None:
+            db_rows = result[0]
+        else:
+            db_rows = 0
+
+        # Check if the total entries match the expected count
+        if db_rows == total_entries and full_run:
+            logger.info(
+                "All Good -- Contact API Rows: %s, DB Rows: %s",
+                total_entries,
+                db_rows,
+                extra={"tags": {"service": "contacts", "finished": "full"}},
+            )
+    elif not all_sourced:
         logger.error(
-            "Row Mismatch",
-            extra={"tags": {"service": "contacts", "error": "data validation"}},
+            "Can't check for deletes, problem with contacts API data",
+            extra={"tags": {"service": "contacts"}},
         )
 
     connection.commit()

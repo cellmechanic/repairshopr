@@ -7,7 +7,6 @@ from library.db_create import create_estimates_table_if_not_exists
 from library.db_delete import move_deleted_estimates_to_deleted_table
 from library.db_general import compare_id_sums, connect_to_db, rate_limit
 from library.db_insert import insert_estimates
-from library.timestamp_files import check_last_ran, update_last_ran
 
 
 def estimates(logger, full_run=False, lookback_days=365):
@@ -21,6 +20,7 @@ def estimates(logger, full_run=False, lookback_days=365):
     # Meta vars
     current_page = 1
     total_pages = 0
+    api_page = 1
     all_data = []
 
     if not full_run:
@@ -96,6 +96,7 @@ def estimates(logger, full_run=False, lookback_days=365):
                 logger.info(
                     "Added in page # %s", page, extra={"tags": {"service": "estimates"}}
                 )
+                api_page = page
             else:
                 logger.error(
                     "Error getting estimate data",
@@ -116,36 +117,42 @@ def estimates(logger, full_run=False, lookback_days=365):
         )
 
         insert_estimates(logger, cursor, all_data)
-
-        deleted = compare_id_sums(logger, cursor, all_data, "estimates")
-
-        if not deleted:
-            move_deleted_estimates_to_deleted_table(
-                logger, cursor, connection, all_data
-            )
-
-        # Validate data / totals
-        query = "SELECT COUNT(*) FROM estimates"
-        cursor.execute(query)
-        result = cursor.fetchone()
-        if result is not None:
-            db_rows = result[0]
+        if api_page == total_pages:
+            all_sourced = True
         else:
-            db_rows = 0
-
-        # Check if the total entries match the expected count
-        if db_rows == len(all_data):
-            logger.info(
-                "All Good -- Estimate API Rows: %s, DB Rows: %s",
-                len(all_data),
-                db_rows,
-                extra={"tags": {"service": "estimates", "finished": "full"}},
-            )
-        else:
+            all_sourced = False
+        if all_sourced:
+            deleted = compare_id_sums(logger, cursor, all_data, "estimates")
+            if not deleted:
+                move_deleted_estimates_to_deleted_table(
+                    logger, cursor, connection, all_data
+                )
+            # Validate data / totals
+            query = "SELECT COUNT(*) FROM estimates"
+            cursor.execute(query)          
+            result = cursor.fetchone()
+            if result is not None:
+                db_rows = result[0]
+            else:
+                db_rows = 0
+            # Check if the total entries match the expected count
+            if db_rows == len(all_data):
+                logger.info(
+                    "All Good -- Estimate API Rows: %s, DB Rows: %s",
+                    len(all_data),
+                    db_rows,
+                    extra={"tags": {"service": "estimates", "finished": "full"}},
+                )
+            else:
+                logger.error(
+                    "Estimate API Rows: %s, DB Rows: %s",
+                    len(all_data),
+                    db_rows,
+                    extra={"tags": {"service": "estimates"}},
+                )
+        elif not all_sourced:
             logger.error(
-                "Estimate API Rows: %s, DB Rows: %s",
-                len(all_data),
-                db_rows,
+                "Can't check for deletes, problem with estimates API data",
                 extra={"tags": {"service": "estimates"}},
             )
 

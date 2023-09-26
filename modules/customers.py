@@ -65,32 +65,35 @@ def customers(logger, full_run=False):
 
     insert_customers(logger, cursor, all_data)
 
-    # Check ID sums to see if anything was deleted
-    deleted = compare_id_sums(logger, cursor, all_data, "customers")
+    if len(all_data) == total_entries:
+        all_sourced = True
+    else:
+        all_sourced = False
 
-    if not deleted:
-        move_deleted_customers_to_deleted_table(logger, cursor, connection, all_data)
-
-    # Validate data / totals
-    query = "SELECT COUNT(*) FROM customers"
-    cursor.execute(query)
-    result = cursor.fetchone()
-    if result is not None:
-        db_rows = result[0]
-
-    # Check if the total entries match the expected count
-    if db_rows == total_entries and full_run:
-        logger.info(
-            "All Good -- Customer API Rows: %s, DB Rows: %s",
-            total_entries,
-            db_rows,
-            extra={"tags": {"service": "customers", "finished": "full"}},
-        )
-    elif db_rows != total_entries:
+    if all_sourced:
+        deleted = compare_id_sums(logger, cursor, all_data, "customers")
+        if not deleted:
+            move_deleted_customers_to_deleted_table(logger, cursor, connection, all_data)
+        # Validate data / totals
+        query = "SELECT COUNT(*) FROM customers"
+        cursor.execute(query)
+        result = cursor.fetchone()
+        if result is not None:
+            db_rows = result[0]
+        # Check if the total entries match the expected count
+        if db_rows == total_entries and full_run:
+            logger.info(
+                "All Good -- Customer API Rows: %s, DB Rows: %s",
+                total_entries,
+                db_rows,
+                extra={"tags": {"service": "customers", "finished": "full"}},
+            )
+    elif not all_sourced:
         logger.error(
-            "Row Mismatch in Customers",
-            extra={"tags": {"service": "customers", "error": "data validation"}},
+            "Can't check for deletes, problem with customers API data",
+            extra={"tags": {"service": "customers"}},
         )
+
 
     connection.commit()
     connection.close()
