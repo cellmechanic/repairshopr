@@ -153,7 +153,7 @@ def insert_tickets(logger, cursor, items):
                     "Ticket %s is being updated, resolved_at: %s, updated: %s, db timestamp: %s",
                     item["id"],
                     item["resolved_at"],
-                    item["updated_at_u"],
+                    rs_to_unix_timestamp(item["updated_at"]),
                     existing_record[0],
                     extra={"tags": {"service": "ticket watch"}},
                 )
