@@ -125,8 +125,8 @@ def insert_tickets(logger, cursor, items):
                 updated += 1
                 sql = """UPDATE tickets SET
                     number = %s,
-                    subject = %s',
-                    created_at = '%s',
+                    subject = %s,
+                    created_at = %s,
                     created_at_u = %s,
                     customer_id = %s,
                     customer_business_then_name = %s,
@@ -146,7 +146,7 @@ def insert_tickets(logger, cursor, items):
                     pdf_url = %s,
                     priority = %s,
                     comments = %s,
-                    num_devices = %s,
+                    num_devices = %s
                 WHERE id = %s"""
 
                 values = (
@@ -187,13 +187,8 @@ def insert_tickets(logger, cursor, items):
                     rs_to_unix_timestamp(item["updated_at"]) >= existing_record[0],
                     extra={"tags": {"service": "ticket watch"}},
                 )
-                try:
-                    cursor.execute(sql)
-                except:
-                    logger.info(
-                        f"not working sql",
-                        extra={"tags": {"service": "ticket watch"}},
-                    )
+                cursor.execute(sql, values)
+
         else:
             # If record doesn't exist, insert it
             added += 1
