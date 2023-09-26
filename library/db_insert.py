@@ -120,7 +120,7 @@ def insert_tickets(logger, cursor, items):
         cursor.execute("SELECT updated_at_u FROM tickets WHERE id = %s", (item["id"],))
         existing_record = cursor.fetchone()
         if existing_record:
-            if rs_to_unix_timestamp(item["updated_at"]) >= existing_record[0]:
+            if rs_to_unix_timestamp(item["updated_at"]) > existing_record[0]:
                 # If record exists and updated_at is greater, update it
                 updated += 1
                 sql = """UPDATE tickets SET
@@ -174,18 +174,6 @@ def insert_tickets(logger, cursor, items):
                     json.dumps(item.get("comments", {})),
                     extract_devices(item["subject"]),
                     item["id"],
-                )
-
-
-                logger.info(
-                    "Ticket %s is being updated, resolved_at: %s, "
-                    "updated: %s, db timestamp: %s compare value %s",
-                    item["number"],
-                    item["resolved_at"],
-                    rs_to_unix_timestamp(item["updated_at"]),
-                    existing_record[0],
-                    rs_to_unix_timestamp(item["updated_at"]) >= existing_record[0],
-                    extra={"tags": {"service": "ticket watch"}},
                 )
                 cursor.execute(sql, values)
 
