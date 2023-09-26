@@ -93,7 +93,7 @@ def tickets(logger, full_run=False, lookback_days=14):
                 extra={"tags": {"service": "tickets"}},
             )
 
-        for page in range(1, 10):
+        for page in range(1, total_pages + 1):
             data = get_tickets(logger, page)
             if data is not None:
                 all_data.extend(data["tickets"])
