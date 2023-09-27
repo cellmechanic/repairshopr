@@ -40,7 +40,7 @@ def create_volume_table_if_not_exists(cursor):
         deleted_products INT DEFAULT 0,
         new_users INT DEFAULT 0,
         updated_users INT DEFAULT 0,
-        deleted_users INT DEFAULT 0,   
+        deleted_users INT DEFAULT 0  
         )
         """
     )

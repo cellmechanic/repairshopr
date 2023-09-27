@@ -26,7 +26,7 @@ def output(logger):
 
     output_comments = get_output_comments(logger, all_comments)
 
-    intake_comments = get_intake_comments(logger, cursor, all_comments)
+    intake_comments = get_intake_comments(logger, cursor, today)
 
     insert_regex_comments(logger, cursor, output_comments)
 

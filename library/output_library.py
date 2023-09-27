@@ -106,29 +106,28 @@ def get_output_comments(logger, all_comments):
 
 def get_intake_comments(logger, cursor, date):
     """Process all the comments and extract intake ones"""
-    
-    checked_in_comments = []       
-    
+
+    checked_in_comments = []
+
     cursor.execute(
-        "SELECT id, num_devices, FROM tickets WHERE DATE(created_at) = %s", 
-        (date,)
+        "SELECT id, num_devices FROM tickets WHERE DATE(created_at) = %s", (date,)
     )
     tickets_created = cursor.fetchall()
 
     if not tickets_created:
         logger.warning(
-        "No comments found in DB",
-        extra={"tags": {"service": "output comments"}},
+            "No comments found in DB",
+            extra={"tags": {"service": "output comments"}},
         )
         return []
-    
+
     for ticket in tickets_created:
         ticket_id = ticket[0]
         num_devices = ticket[1]
 
         cursor.execute(
-            "SELECT comment_id, created_at, user_id, tech FROM comments WHERE ticket_id = %s ORDER BY created_at ASC LIMIT 1",
-            (ticket_id,)
+            "SELECT id, created_at, user_id, tech FROM comments WHERE ticket_id = %s ORDER BY created_at ASC LIMIT 1",
+            (ticket_id,),
         )
         comment = cursor.fetchone()
 
@@ -142,7 +141,7 @@ def get_intake_comments(logger, cursor, date):
                     "user_id": comment[2],
                     "tech": comment[3],
                 }
-            )     
+            )
     return checked_in_comments
 
 
@@ -181,7 +180,7 @@ def insert_regex_comments(logger, cursor, data):
                 quality_control = count
             elif job_type.lower() == "mb":
                 board_repair = count
-            elif job_type.lower() == "qcr": 
+            elif job_type.lower() == "qcr":
                 quality_control_rejects = count
                 # Extract the employee name from qcr entries
                 employee_name = parts[1].strip().split(":")
@@ -209,6 +208,7 @@ def insert_regex_comments(logger, cursor, data):
             )
             cursor.execute(query, values)
 
+
 def insert_intake_comments(logger, cursor, intake_comments):
     """Insert intake comments into DB"""
     for comment in intake_comments:
@@ -226,6 +226,7 @@ def insert_intake_comments(logger, cursor, intake_comments):
             comment["created_at"],
         )
         cursor.execute(query, values)
+
 
 def insert_invoice_comments(logger, cursor, invoice_creates):
     """Insert invoice comments into DB"""
