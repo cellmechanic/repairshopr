@@ -104,46 +104,45 @@ def get_output_comments(logger, all_comments):
     return production_comments
 
 
-def get_intake_comments(logger, cursor, all_comments):
+def get_intake_comments(logger, cursor, date):
     """Process all the comments and extract intake ones"""
-    checked_in_comments = []
+    
+    checked_in_comments = []       
+    
+    cursor.execute(
+        "SELECT id, num_devices, FROM tickets WHERE DATE(created_at) = %s", 
+        (date,)
+    )
+    tickets_created = cursor.fetchall()
 
-    if all_comments is None:
+    if not tickets_created:
         logger.warning(
         "No comments found in DB",
         extra={"tags": {"service": "output comments"}},
-    )
+        )
+        return []
+    
+    for ticket in tickets_created:
+        ticket_id = ticket[0]
+        num_devices = ticket[1]
 
-    if all_comments is not None:
-        for comment in all_comments:
-            if comment.get("subject") == "Initial Issue":
-                ticket_id = comment.get("ticket_id")
-                if ticket_id:
-                    cursor.execute(
-                        "SELECT num_devices FROM tickets WHERE id = %s", (ticket_id,)
-                    )
-                    result = cursor.fetchone()
-                    if result:
-                        num_devices = result[0]
-                        checked_in_comments.append(
-                            {
-                                "comment_id": comment.get("comment_id"),
-                                "created_at": comment.get("created_at"),
-                                "ticket_id": ticket_id,
-                                "subject": comment.get("subject"),
-                                "num_devices": num_devices,
-                                "user_id": comment.get("user_id"),
-                                "tech": comment.get("tech"),
-                                "body": comment.get("body"),
-                            }
-                        )
+        cursor.execute(
+            "SELECT comment_id, created_at, user_id, tech FROM comments WHERE ticket_id = %s ORDER BY created_at ASC LIMIT 1",
+            (ticket_id,)
+        )
+        comment = cursor.fetchone()
 
-    logger.info(
-        "Number of potential intake comments: %s",
-        len(checked_in_comments),
-        extra={"tags": {"service": "output comments"}},
-    )
-
+        if comment:
+            checked_in_comments.append(
+                {
+                    "comment_id": comment[0],
+                    "created_at": comment[1],
+                    "ticket_id": ticket_id,
+                    "num_devices": num_devices,
+                    "user_id": comment[2],
+                    "tech": comment[3],
+                }
+            )     
     return checked_in_comments
 
 
