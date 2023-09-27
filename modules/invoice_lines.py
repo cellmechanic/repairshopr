@@ -28,6 +28,7 @@ def invoice_lines(logger, full_run=False):
     # Start fetching line items from the end
     total_pages = 0
     current_page = 1
+    api_page = 1
     all_data = []
     found_last_updated_row = False
 
@@ -90,6 +91,7 @@ def invoice_lines(logger, full_run=False):
             extra={"tags": {"service": "invoice_lines"}},
         )
         insert_invoice_lines(logger, cursor, all_data)
+        update_last_ran(timestamp_file)
 
     if full_run:
         data = get_invoice_lines(logger, current_page)
@@ -105,6 +107,7 @@ def invoice_lines(logger, full_run=False):
             data = get_invoice_lines(logger, page)
             if data is not None:
                 all_data.extend(data["line_items"])
+                api_page = page
                 logger.info(
                     "Added in page # %s",
                     page,
@@ -130,30 +133,44 @@ def invoice_lines(logger, full_run=False):
         )
 
         insert_invoice_lines(logger, cursor, all_data)
-
-        deleted = compare_id_sums(logger, cursor, all_data, "invoice_items")
-
-        if not deleted:
-            move_deleted_lines_to_deleted_table(logger, cursor, connection, all_data)
-
-        # Validate data / totals
-        query = "SELECT COUNT(*) FROM invoice_items"
-        cursor.execute(query)
-        result = cursor.fetchone()
-        if result is not None:
-            db_rows = result[0]
+        if api_page == total_pages:
+            all_sourced = True
         else:
-            db_rows = 0
-
-        # Check if the total entries match the expected count
-        if db_rows == len(all_data):
-            logger.info(
-                "All Good -- Invoice Line API Rows: %s, DB Rows %s",
-                len(all_data),
-                db_rows,
+            all_sourced = False
+        if all_sourced:
+            deleted = compare_id_sums(logger, cursor, all_data, "invoice_items")
+            if not deleted:
+                move_deleted_lines_to_deleted_table(
+                    logger, cursor, connection, all_data
+                )
+            # Validate data / totals
+            query = "SELECT COUNT(*) FROM invoice_items"
+            cursor.execute(query)
+            result = cursor.fetchone()
+            if result is not None:
+                db_rows = result[0]
+            else:
+                db_rows = 0
+            # Check if the total entries match the expected count
+            if db_rows == len(all_data):
+                logger.info(
+                    "All Good -- Invoice Line API Rows: %s, DB Rows %s",
+                    len(all_data),
+                    db_rows,
+                    extra={"tags": {"service": "invoice_lines", "finished": "full"}},
+                )
+            else:
+                logger.error(
+                    "Data Mismatch -- API Rows: %s, DB Rows: %s",
+                    len(all_data),
+                    db_rows,
+                    extra={"tags": {"service": "invoice_lines", "finished": "full"}},
+                )
+        elif not all_sourced:
+            logger.error(
+                "Can't check for deletes, problem with invoice lines API data",
                 extra={"tags": {"service": "invoice_lines", "finished": "full"}},
             )
 
     connection.commit()
     connection.close()
-    update_last_ran(timestamp_file)

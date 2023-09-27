@@ -64,12 +64,10 @@ def customers(logger, full_run=False):
     )
 
     insert_customers(logger, cursor, all_data)
-
     if len(all_data) == total_entries:
         all_sourced = True
     else:
         all_sourced = False
-
     if all_sourced:
         deleted = compare_id_sums(logger, cursor, all_data, "customers")
         if not deleted:
@@ -88,10 +86,17 @@ def customers(logger, full_run=False):
                 db_rows,
                 extra={"tags": {"service": "customers", "finished": "full"}},
             )
+        if db_rows != total_entries and full_run:
+            logger.error(
+                "Data Mismatch -- Customer API Rows: %s, DB Rows: %s",
+                total_entries,
+                db_rows,
+                extra={"tags": {"service": "customers", "finished": "full"}},
+            )
     elif not all_sourced:
         logger.error(
             "Can't check for deletes, problem with customers API data",
-            extra={"tags": {"service": "customers"}},
+            extra={"tags": {"service": "customers", "finished": "full"}},
         )
 
 

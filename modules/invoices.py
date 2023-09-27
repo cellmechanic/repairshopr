@@ -23,6 +23,7 @@ def invoices(logger, full_run=False, lookback_days=14):
     # Meta vars
     current_page = 1
     total_pages = 0
+    api_page = 1
     all_data = []
 
     if not full_run:
@@ -86,6 +87,7 @@ def invoices(logger, full_run=False, lookback_days=14):
         # total_pages + 1
         for page in range(1, total_pages + 1):
             data = get_invoices(logger, page)
+            api_page = page
             if data is not None:
                 all_data.extend(data["invoices"])
                 logger.info(
@@ -112,28 +114,41 @@ def invoices(logger, full_run=False, lookback_days=14):
             extra={"tags": {"service": "invoices"}},
         )
         insert_invoices(logger, cursor, all_data)
-
-        deleted = compare_id_sums(logger, cursor, all_data, "invoices")
-
-        if not deleted:
-            move_deleted_invoices_to_deleted_table(logger, cursor, connection, all_data)
-
-        # Validate data / totals
-        query = "SELECT COUNT(*) FROM invoices"
-        cursor.execute(query)
-        result = cursor.fetchone()
-        if result is not None:
-            db_rows = result[0]
+        if api_page == total_pages:
+            all_sourced = True
         else:
-            db_rows = 0
-
-        # Check if the total entries match the expected count
-        if db_rows == len(all_data):
-            logger.info(
-                "All Good -- Invoice API Rows: %s, DB Rows: %s",
-                len(all_data),
-                db_rows,
-                extra={"tags": {"service": "invoices"}},
+            all_sourced = False
+        if all_sourced:
+            deleted = compare_id_sums(logger, cursor, all_data, "invoices")
+            if not deleted:
+                move_deleted_invoices_to_deleted_table(logger, cursor, connection, all_data)
+            # Validate data / totals
+            query = "SELECT COUNT(*) FROM invoices"
+            cursor.execute(query)
+            result = cursor.fetchone()
+            if result is not None:
+                db_rows = result[0]
+            else:
+                db_rows = 0
+            # Check if the total entries match the expected count
+            if db_rows == len(all_data):
+                logger.info(
+                    "All Good -- Invoice API Rows: %s, DB Rows: %s",
+                    len(all_data),
+                    db_rows,
+                    extra={"tags": {"service": "invoices", "finished": "full"}},
+                )
+            else:
+                logger.error(
+                    "Data mismatch -- Invoice API Rows: %s, DB Rows: %s",
+                    len(all_data),
+                    db_rows,
+                    extra={"tags": {"service": "invoices", "finished": "full"}},
+                )
+        elif not all_sourced:
+            logger.error(
+                "Can't check for deletes, problem with invoice API data",
+                extra={"tags": {"service": "invoices", "finished": "full"}},
             )
 
     connection.commit()

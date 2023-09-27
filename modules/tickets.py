@@ -13,6 +13,7 @@ from library.db_delete import (
 from library.db_general import compare_id_sums, connect_to_db, rate_limit
 from library.db_insert import insert_comments, insert_tickets
 
+
 def tickets(logger, full_run=False, lookback_days=14):
     """main script for the ticket module"""
 
@@ -24,6 +25,7 @@ def tickets(logger, full_run=False, lookback_days=14):
 
     # Meta vars
     current_page = 1
+    api_page = 1
     total_pages = 0
     all_data = []
 
@@ -91,6 +93,7 @@ def tickets(logger, full_run=False, lookback_days=14):
             data = get_tickets(logger, page)
             if data is not None:
                 all_data.extend(data["tickets"])
+                api_page = page
                 logger.info(
                     "Added in page # %s",
                     page,
@@ -117,67 +120,73 @@ def tickets(logger, full_run=False, lookback_days=14):
 
         insert_tickets(logger, cursor, all_data)
         comments_data = insert_comments(logger, cursor, all_data)
-
-        # Check ID sums to see if any comment was deleted
-        deleted = compare_id_sums(logger, cursor, comments_data, "comments")
-
-        if not deleted:
-            move_deleted_comments_to_deleted_table(logger, cursor, connection, all_data)
-
-        # Validate data / totals
-        query = "SELECT COUNT(*) FROM comments"
-        cursor.execute(query)
-        db_rows = cursor.fetchone()
-        if db_rows is not None:
-            db_rows = db_rows[0]
+        if api_page == total_pages:
+            all_sourced = True
         else:
-            db_rows = 0
-
-        # Check if the API and DB totals match
-        if db_rows == len(comments_data):
-            logger.info(
-                "ALL Good -- Ticket Comments API Rows: %s, DB Rows: %s",
-                len(comments_data),
-                db_rows,
-                extra={"tags": {"service": "tickets", "finished": "full"}},
-            )
-        else:
+            all_sourced = False
+        if all_sourced:
+            # Check ID sums to see if any comment was deleted
+            deleted = compare_id_sums(logger, cursor, comments_data, "comments")
+            if not deleted:
+                move_deleted_comments_to_deleted_table(
+                    logger, cursor, connection, all_data
+                )
+            # Validate data / totals
+            query = "SELECT COUNT(*) FROM comments"
+            cursor.execute(query)
+            db_rows = cursor.fetchone()
+            if db_rows is not None:
+                db_rows = db_rows[0]
+            else:
+                db_rows = 0
+            # Check if the API and DB totals match
+            if db_rows == len(comments_data):
+                logger.info(
+                    "ALL Good -- Ticket Comments API Rows: %s, DB Rows: %s",
+                    len(comments_data),
+                    db_rows,
+                    extra={"tags": {"service": "tickets", "finished": "full"}},
+                )
+            else:
+                logger.error(
+                    "Data Mismatch -- Ticket Comments API Rows: %s, DB Rows: %s",
+                    len(comments_data),
+                    db_rows,
+                    extra={"tags": {"service": "tickets"}},
+                )
+            # Again for tickets
+            deleted = compare_id_sums(logger, cursor, all_data, "tickets")
+            if not deleted:
+                move_deleted_tickets_to_deleted_table(
+                    logger, cursor, connection, all_data
+                )
+            # Validate data / totals
+            query = "SELECT COUNT(*) FROM tickets"
+            cursor.execute(query)
+            db_rows = cursor.fetchone()
+            if db_rows is not None:
+                db_rows = db_rows[0]
+            else:
+                db_rows = 0
+            # Check if the API and DB totals match
+            if db_rows == len(all_data):
+                logger.info(
+                    "ALL Good -- Ticket API Rows: %s, DB Rows: %s",
+                    len(all_data),
+                    db_rows,
+                    extra={"tags": {"service": "tickets", "finished": "full"}},
+                )
+            else:
+                logger.error(
+                    "Data Mismatch -- Ticket API Rows: %s, DB Rows: %s",
+                    len(all_data),
+                    db_rows,
+                    extra={"tags": {"service": "tickets", "finished": "full"}},
+                )
+        elif not all_sourced:
             logger.error(
-                "Ticket Comments API Rows: %s, DB Rows: %s",
-                len(comments_data),
-                db_rows,
-                extra={"tags": {"service": "tickets"}},
-            )
-
-        # Again for tickets
-        deleted = compare_id_sums(logger, cursor, all_data, "tickets")
-
-        if not deleted:
-            move_deleted_tickets_to_deleted_table(logger, cursor, connection, all_data)
-
-        # Validate data / totals
-        query = "SELECT COUNT(*) FROM tickets"
-        cursor.execute(query)
-        db_rows = cursor.fetchone()
-        if db_rows is not None:
-            db_rows = db_rows[0]
-        else:
-            db_rows = 0
-
-        # Check if the API and DB totals match
-        if db_rows == len(all_data):
-            logger.info(
-                "ALL Good -- Ticket API Rows: %s, DB Rows: %s",
-                len(all_data),
-                db_rows,
+                "Can't check for deletes, problem with ticket / ticket comment API data",
                 extra={"tags": {"service": "tickets", "finished": "full"}},
-            )
-        else:
-            logger.error(
-                "Ticket API Rows: %s, DB Rows: %s",
-                len(all_data),
-                db_rows,
-                extra={"tags": {"service": "tickets"}},
             )
 
     connection.commit()

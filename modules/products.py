@@ -66,32 +66,39 @@ def products(logger, full_run=False):
     )
 
     insert_products(logger, cursor, all_data)
-
-    # Check ID sums to see if anything was deleted
-    deleted = compare_id_sums(logger, cursor, all_data, "products")
-    if not deleted:
-        move_deleted_products_to_deleted_table(logger, cursor, connection, all_data)
-
-    # Validate data / totals
-    query = "SELECT COUNT(*) FROM products"
-    cursor.execute(query)
-    result = cursor.fetchone()
-    if result is not None:
-        db_rows = result[0]
-
-    # Check if total entries match the expected count
-    if db_rows == total_entries and full_run:
-        logger.info(
-            "All Good -- Product API Rows: %s, DB Rows: %s",
-            total_entries,
-            db_rows,
-            extra={"tags": {"service": "products", "finished": "full"}},
-        )
-    elif db_rows != total_entries:
+    if len(all_data) == total_entries:
+        all_sourced = True
+    else:
+        all_sourced = False
+    if all_sourced:
+        # Check ID sums to see if anything was deleted
+        deleted = compare_id_sums(logger, cursor, all_data, "products")
+        if not deleted:
+            move_deleted_products_to_deleted_table(logger, cursor, connection, all_data)
+        # Validate data / totals
+        query = "SELECT COUNT(*) FROM products"
+        cursor.execute(query)
+        result = cursor.fetchone()
+        if result is not None:
+            db_rows = result[0]
+        # Check if total entries match the expected count
+        if db_rows == total_entries and full_run:
+            logger.info(
+                "All Good -- Product API Rows: %s, DB Rows: %s",
+                total_entries,
+                db_rows,
+                extra={"tags": {"service": "products", "finished": "full"}},
+            )
+        if db_rows != total_entries and full_run:
+            logger.error(
+                "Data Mismatch -- Product API Rows: %s, DB Rows: %s",
+                total_entries,
+                db_rows,
+                extra={"tags": {"service": "products"}},
+            )
+    elif not all_sourced:
         logger.error(
-            "Product Meta Rows: %s, DB Rows: %s",
-            total_entries,
-            db_rows,
+            "Can't check for deletes, problem with products API data",
             extra={"tags": {"service": "products"}},
         )
 

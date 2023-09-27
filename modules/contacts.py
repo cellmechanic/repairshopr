@@ -71,7 +71,6 @@ def contacts(logger, full_run=False):
         all_sourced = True
     else:
         all_sourced = False
-
     # Check ID sums to see if anything was deleted
     if all_sourced:
         deleted = compare_id_sums(logger, cursor, all_data, "contacts")
@@ -85,7 +84,6 @@ def contacts(logger, full_run=False):
             db_rows = result[0]
         else:
             db_rows = 0
-
         # Check if the total entries match the expected count
         if db_rows == total_entries and full_run:
             logger.info(
@@ -94,10 +92,17 @@ def contacts(logger, full_run=False):
                 db_rows,
                 extra={"tags": {"service": "contacts", "finished": "full"}},
             )
+        if db_rows != total_entries and full_run:
+            logger.error(
+                "Data Mismatch -- Contact API Rows: %s, DB Rows: %s",
+                total_entries,
+                db_rows,
+                extra={"tags": {"service": "contacts", "finished": "full"}},
+            )
     elif not all_sourced:
         logger.error(
             "Can't check for deletes, problem with contacts API data",
-            extra={"tags": {"service": "contacts"}},
+            extra={"tags": {"service": "contacts", "finished": "full"}},
         )
 
     connection.commit()

@@ -18,6 +18,7 @@ def payments(logger, full_run=False, lookback_days=14):
 
     # Meta vars
     current_page = 1
+    api_page = 1
     total_pages = 0
     all_data = []
 
@@ -89,6 +90,7 @@ def payments(logger, full_run=False, lookback_days=14):
             data = get_payments(logger, page)
             if data is not None:
                 all_data.extend(data["payments"])
+                api_page = page
                 logger.info(
                     "Added in page # %s", page, extra={"tags": {"service": "payments"}}
                 )
@@ -112,34 +114,41 @@ def payments(logger, full_run=False, lookback_days=14):
         )
 
         insert_payments(logger, cursor, all_data)
-
-        deleted = compare_id_sums(logger, cursor, all_data, "payments")
-        if not deleted:
-            move_deleted_payments_to_deleted_table(logger, cursor, connection, all_data)
-
-        # Validate data / totals
-        query = "SELECT COUNT(*) FROM payments"
-        cursor.execute(query)
-        result = cursor.fetchone()
-        if result is not None:
-            db_rows = result[0]
+        if api_page == total_pages:
+            all_sourced = True
         else:
-            db_rows = 0
-
-        # Check if the total entries match the expected count
-        if db_rows == len(all_data):
-            logger.info(
-                "All Good -- Payment API Rows: %s, DB Rows: %s",
-                len(all_data),
-                db_rows,
-                extra={"tags": {"service": "payments", "finished": "full"}},
-            )
-        else:
+            all_sourced = False
+        if all_sourced:
+            deleted = compare_id_sums(logger, cursor, all_data, "payments")
+            if not deleted:
+                move_deleted_payments_to_deleted_table(logger, cursor, connection, all_data)
+            # Validate data / totals
+            query = "SELECT COUNT(*) FROM payments"
+            cursor.execute(query)
+            result = cursor.fetchone()
+            if result is not None:
+                db_rows = result[0]
+            else:
+                db_rows = 0
+            # Check if the total entries match the expected count
+            if db_rows == len(all_data):
+                logger.info(
+                    "All Good -- Payment API Rows: %s, DB Rows: %s",
+                    len(all_data),
+                    db_rows,
+                    extra={"tags": {"service": "payments", "finished": "full"}},
+                )
+            else:
+                logger.error(
+                    "Data mismatch -- Payment Meta Rows: %s, DB Rows: %s",
+                    len(all_data),
+                    db_rows,
+                    extra={"tags": {"service": "payments", "finished": "full"}},
+                )
+        elif not all_sourced:
             logger.error(
-                "Data mismatch -- Payment Meta Rows: %s, DB Rows: %s",
-                len(all_data),
-                db_rows,
-                extra={"tags": {"service": "payments"}},
+                "Can't check for deletes, problem with payment API data",
+                extra={"tags": {"service": "payments", "finished": "full"}},
             )
 
     connection.commit()

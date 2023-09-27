@@ -129,7 +129,7 @@ def estimates(logger, full_run=False, lookback_days=365):
                 )
             # Validate data / totals
             query = "SELECT COUNT(*) FROM estimates"
-            cursor.execute(query)          
+            cursor.execute(query)
             result = cursor.fetchone()
             if result is not None:
                 db_rows = result[0]
@@ -145,15 +145,15 @@ def estimates(logger, full_run=False, lookback_days=365):
                 )
             else:
                 logger.error(
-                    "Estimate API Rows: %s, DB Rows: %s",
+                    "Data Mismatch -- Estimate API Rows: %s, DB Rows: %s",
                     len(all_data),
                     db_rows,
-                    extra={"tags": {"service": "estimates"}},
+                    extra={"tags": {"service": "estimates", "finished": "full"}},
                 )
         elif not all_sourced:
             logger.error(
                 "Can't check for deletes, problem with estimates API data",
-                extra={"tags": {"service": "estimates"}},
+                extra={"tags": {"service": "estimates", "finished": "full"}},
             )
 
     connection.commit()
