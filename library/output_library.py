@@ -12,6 +12,7 @@ def create_employee_output_table_if_not_exists(cursor):
             id INT AUTO_INCREMENT PRIMARY KEY,
             ticket_id INT,
             comment_id INT UNIQUE,
+            invoice_id INT UNIQUE,
             employee_id INT,            
             username VARCHAR(255),
             repairs INT DEFAULT 0,
@@ -179,7 +180,9 @@ def insert_regex_comments(logger, cursor, data):
                 diagnostics = count
             elif job_type.lower() == "qc":
                 quality_control = count
-            elif job_type.lower() == "qcr":
+            elif job_type.lower() == "mb":
+                board_repair = count
+            elif job_type.lower() == "qcr": 
                 quality_control_rejects = count
                 # Extract the employee name from qcr entries
                 employee_name = parts[1].strip().split(":")
@@ -213,6 +216,24 @@ def insert_intake_comments(logger, cursor, intake_comments):
         query = """
             INSERT IGNORE INTO employee_output
             (ticket_id, comment_id, employee_id, username, intake, datetime)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        values = (
+            comment["ticket_id"],
+            comment["comment_id"],
+            comment["user_id"],
+            comment["tech"],
+            comment["num_devices"],
+            comment["created_at"],
+        )
+        cursor.execute(query, values)
+
+def insert_invoice_comments(logger, cursor, invoice_creates):
+    """Insert invoice comments into DB"""
+    for comment in invoice_creates:
+        query = """
+            INSERT IGNORE INTO employee_output
+            (ticket_id, comment_id, employee_id, username, invoices, datetime)
             VALUES (%s, %s, %s, %s, %s, %s)
         """
         values = (
