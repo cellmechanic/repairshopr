@@ -6,8 +6,10 @@ from library.output_library import (
     create_employee_output_table_if_not_exists,
     get_comments_db,
     get_intake_comments,
+    get_invoice_numbers,
     get_output_comments,
-    insert_intake_comments,
+    insert_intake_numbers,
+    insert_invoice_numbers,
     insert_regex_comments,
 )
 
@@ -28,9 +30,13 @@ def output(logger):
 
     intake_comments = get_intake_comments(logger, cursor, today)
 
+    invoices_created = get_invoice_numbers(logger, cursor, today)
+
     insert_regex_comments(logger, cursor, output_comments)
 
-    insert_intake_comments(logger, cursor, intake_comments)
+    insert_intake_numbers(logger, cursor, intake_comments)
+
+    insert_invoice_numbers(logger, cursor, invoices_created)
 
     connection.commit()
     connection.close()

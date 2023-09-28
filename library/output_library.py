@@ -116,7 +116,7 @@ def get_intake_comments(logger, cursor, date):
 
     if not tickets_created:
         logger.warning(
-            "No comments found in DB",
+            "No comments / tickets found in DB",
             extra={"tags": {"service": "output comments"}},
         )
         return []
@@ -145,6 +145,93 @@ def get_intake_comments(logger, cursor, date):
     return checked_in_comments
 
 
+def get_invoice_numbers(logger, cursor, date):
+    """Insert invoice creates into DB"""
+    cursor.execute(
+        "SELECT id, user_id, ticket_id, created_at FROM invoices WHERE DATE(created_at) = %s",
+        (date,),
+    )
+    invoices_created = []
+    todays_invoices = cursor.fetchall()
+    print(todays_invoices)
+    if todays_invoices:
+        for invoice in todays_invoices:
+            invoice_id = invoice[0]
+            user_id = invoice[1]
+            ticket_id = invoice[2]
+            created_at = invoice[3]
+            print(user_id)
+
+            # Fetch the num_devices from the tickets table
+            cursor.execute(
+                "SELECT num_devices FROM tickets WHERE id = %s", (ticket_id,)
+            )
+            result = cursor.fetchone()
+            if result:
+                num_devices = result[0]
+            else:
+                num_devices = 1
+
+            if user_id:
+                # Fetch the username from the users table
+                cursor.execute("SELECT name FROM users WHERE id = %s", (user_id,))
+                user_result = cursor.fetchone()
+                username = user_result[0] if user_result else "Unknown"
+            else:
+                username = "None"
+
+            invoices_created.append(
+                {
+                    "invoice_id": invoice_id,
+                    "user_id": user_id,
+                    "ticket_id": ticket_id,
+                    "num_devices": num_devices,
+                    "username": username,
+                    "created_at": created_at,
+                }
+            )
+
+    return invoices_created
+
+
+def insert_intake_numbers(logger, cursor, intake_comments):
+    """Insert intake comments into DB"""
+    for comment in intake_comments:
+        query = """
+            INSERT IGNORE INTO employee_output
+            (ticket_id, comment_id, employee_id, username, intake, datetime)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        values = (
+            comment["ticket_id"],
+            comment["comment_id"],
+            comment["user_id"],
+            comment["tech"],
+            comment["num_devices"],
+            comment["created_at"],
+        )
+        cursor.execute(query, values)
+
+
+def insert_invoice_numbers(logger, cursor, invoices_created):
+    """Insert invoice creates into DB"""
+    for invoice in invoices_created:
+        query = """
+            INSERT IGNORE INTO employee_output
+            (ticket_id, invoice_id, employee_id, username, invoices, datetime)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        values = (
+            invoice["ticket_id"],
+            invoice["invoice_id"],
+            invoice["user_id"],
+            invoice["username"],
+            invoice["num_devices"],
+            invoice["created_at"],
+        )
+        cursor.execute(query, values)
+
+
 def insert_regex_comments(logger, cursor, data):
     """Insert employee output data into DB"""
     for comment in data:
@@ -157,8 +244,7 @@ def insert_regex_comments(logger, cursor, data):
             else:
                 count = 0
                 logger.error(
-                    "Production data with no number on ticket"
-                    " https://cellmechanic.repairshopr.com/tickets/%s",
+                    "Production data with no number on ticket" " removed for now%s",
                     comment["ticket_id"],
                     extra={"tags": {"output errors": "no number"}},
                 )
@@ -172,8 +258,6 @@ def insert_regex_comments(logger, cursor, data):
 
             if job_type.lower() == "r":
                 repairs = count
-            elif job_type.lower() == "br":
-                board_repair = count
             elif job_type.lower() == "d":
                 diagnostics = count
             elif job_type.lower() == "qc":
@@ -207,41 +291,3 @@ def insert_regex_comments(logger, cursor, data):
                 comment["created_at"],
             )
             cursor.execute(query, values)
-
-
-def insert_intake_comments(logger, cursor, intake_comments):
-    """Insert intake comments into DB"""
-    for comment in intake_comments:
-        query = """
-            INSERT IGNORE INTO employee_output
-            (ticket_id, comment_id, employee_id, username, intake, datetime)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """
-        values = (
-            comment["ticket_id"],
-            comment["comment_id"],
-            comment["user_id"],
-            comment["tech"],
-            comment["num_devices"],
-            comment["created_at"],
-        )
-        cursor.execute(query, values)
-
-
-def insert_invoice_comments(logger, cursor, invoice_creates):
-    """Insert invoice comments into DB"""
-    for comment in invoice_creates:
-        query = """
-            INSERT IGNORE INTO employee_output
-            (ticket_id, comment_id, employee_id, username, invoices, datetime)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """
-        values = (
-            comment["ticket_id"],
-            comment["comment_id"],
-            comment["user_id"],
-            comment["tech"],
-            comment["num_devices"],
-            comment["created_at"],
-        )
-        cursor.execute(query, values)
