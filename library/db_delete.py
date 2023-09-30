@@ -603,6 +603,93 @@ def move_deleted_comments_to_deleted_table(logger, cursor, connection, data):
     connection.commit()
 
 
+def move_deleted_comments_to_deleted_table_frequent_only(
+    logger, cursor, connection, api_data, db_data
+):
+    """Compare the comments between API and database data, and move any entries not
+    in the API data to the deleted_comments table"""
+
+    # Extract comment IDs from the API data
+    sum_of_ids_api = sum(comment["id"] for comment in api_data)
+
+    # Extract comment IDs from the DB data
+    sum_of_ids_db = sum(comment["id"] for comment in db_data)
+
+    logger.info(
+        "Sum of comment IDs from DB: %s",
+        sum_of_ids_db,
+        extra={"tags": {"service": "move_deleted_comments_to_deleted_table"}},
+    )
+    logger.info(
+        "Sum of comment IDs from API: %s",
+        sum_of_ids_api,
+        extra={"tags": {"service": "move_deleted_comments_to_deleted_table"}},
+    )
+
+    if sum_of_ids_api != sum_of_ids_db:
+        deleted = 0
+        logger.warning(
+            "The sum of IDs does not match. Identifying deleted comments...",
+            extra={"tags": {"service": "move_deleted_comments_to_deleted_table"}},
+        )
+        cursor.execute(
+            """CREATE TABLE IF NOT EXISTS deleted_comments (
+            id INT PRIMARY KEY,
+            created_at DATETIME,
+            updated_at DATETIME,
+            ticket_id INT,
+            subject VARCHAR(255),
+            body TEXT,
+            tech VARCHAR(255),
+            hidden BOOLEAN,
+            user_id INT
+        )
+        """
+        )
+
+        # Get the set of IDs from the API data
+        api_ids = {comment["id"] for comment in api_data}
+
+        # Query all IDs from the comments table
+        db_ids = [comment["id"] for comment in db_data]
+
+        # Check for IDs that are in the DB but not in the API data
+        for db_comment_id in db_ids:
+            if db_comment_id not in api_ids:
+                logger.warning(
+                    "Moving comment with ID %s to deleted_comments table...",
+                    db_comment_id,
+                    extra={
+                        "tags": {
+                            "service": "move_deleted_comments_to_deleted_table",
+                            "finished": "yes",
+                        }
+                    },
+                )
+                # Copy the row to the deleted_comments table
+                cursor.execute(
+                    """INSERT INTO deleted_comments SELECT
+                                * FROM comments WHERE id = %s""",
+                    (db_comment_id,),
+                )
+                # Delete the row from the comments table
+                cursor.execute("DELETE FROM comments WHERE id = %s", (db_comment_id,))
+                deleted += 1
+
+        logger.warning(
+            "Deleted %s comment(s).",
+            deleted,
+            extra={
+                "tags": {
+                    "service": "move_deleted_comments_to_deleted_table",
+                    "finished": "yes",
+                }
+            },
+        )
+
+        connection.commit()
+
+
 def move_deleted_estimates_to_deleted_table(logger, cursor, connection, data):
     """Compare the id sums, and move any entries not
     in the data array to the deleted_estimates table"""

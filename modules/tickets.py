@@ -1,13 +1,14 @@
 """ticket with parameterized lookback"""
 import time
 from library import env_library
-from library.api_requests import get_tickets
+from library.api_requests import get_date_for_header, get_tickets
 from library.db_create import (
     create_comments_table_if_not_exists,
     create_tickets_table_if_not_exists,
 )
 from library.db_delete import (
     move_deleted_comments_to_deleted_table,
+    move_deleted_comments_to_deleted_table_frequent_only,
     move_deleted_tickets_to_deleted_table,
 )
 from library.db_general import compare_id_sums, connect_to_db, rate_limit
@@ -51,6 +52,7 @@ def tickets(logger, full_run=False, lookback_days=14):
             data = get_tickets(logger, page, lookback_days)
             if data is not None:
                 all_data.extend(data["tickets"])
+                api_page = page
                 logger.info(
                     "Added in page # %s",
                     page,
@@ -76,7 +78,61 @@ def tickets(logger, full_run=False, lookback_days=14):
         )
 
         insert_tickets(logger, cursor, all_data)
-        insert_comments(logger, cursor, all_data)
+        comments = insert_comments(logger, cursor, all_data)
+        if api_page == total_pages:
+            all_sourced = True
+        else:
+            all_sourced = False
+        print(all_sourced)
+        if all_sourced:
+            in_range_comments = []
+            for comment in comments:
+                if comment["created_at"] >= get_date_for_header(lookback_days):
+                    in_range_comments.append(comment)
+            # Check ID sums to see if any comment was deleted
+            # Fetch the column names from the cursor description
+            query = "SELECT * from comments WHERE created_at >= %s"
+            cursor.execute(query, (get_date_for_header(lookback_days),))
+            db_comments = cursor.fetchall()
+            column_names = [desc[0] for desc in cursor.description]
+            db_comments_data = [dict(zip(column_names, comment)) for comment in db_comments]
+
+            query = "SELECT SUM(id) FROM comments WHERE created_at >= %s"
+            cursor.execute(query, (get_date_for_header(lookback_days),))
+            db_id_sum = cursor.fetchone()[0]
+            # Extract the "id" values and filter out non-integer values
+
+            api_sum = sum(comment["id"] for comment in in_range_comments)
+            print(db_id_sum)
+            print(api_sum)
+
+            if api_sum != db_id_sum:
+                move_deleted_comments_to_deleted_table_frequent_only(
+                    logger, cursor, connection, in_range_comments, db_comments_data
+                )
+            # Validate data / totals
+            query = "SELECT COUNT(*) FROM tickets WHERE updated_at >= %s"
+            cursor.execute(query, (get_date_for_header(lookback_days),))
+            db_rows = cursor.fetchone()
+            if db_rows is not None:
+                db_rows = db_rows[0]
+            else:
+                db_rows = 0
+            # Check if the API and DB totals match
+            if db_rows == len(all_data):
+                logger.info(
+                    "ALL Good -- Ticket API Rows: %s, DB Rows: %s",
+                    len(all_data),
+                    db_rows,
+                    extra={"tags": {"service": "tickets", "finished": "full"}},
+                )
+            else:
+                logger.error(
+                    "Data Mismatch -- Ticket API Rows: %s, DB Rows: %s",
+                    len(all_data),
+                    db_rows,
+                    extra={"tags": {"service": "tickets", "finished": "full"}},
+                )
 
     if full_run:
         # Get 1st Page, then check to make sure not null

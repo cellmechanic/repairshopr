@@ -1,8 +1,5 @@
 """Library for the output module"""
-
-
 import re
-
 
 def create_employee_output_table_if_not_exists(cursor):
     """Create the employee_output db table if it doesn't already exist"""
@@ -24,6 +21,7 @@ def create_employee_output_table_if_not_exists(cursor):
             intake INT DEFAULT 0,
             invoices INT DEFAULT 0,
             datetime DATETIME,
+            valid TINYINT DEFAULT 1,
             notes TEXT DEFAULT NULL
         )
         """
@@ -126,7 +124,8 @@ def get_intake_comments(logger, cursor, date):
         num_devices = ticket[1]
 
         cursor.execute(
-            "SELECT id, created_at, user_id, tech FROM comments WHERE ticket_id = %s ORDER BY created_at ASC LIMIT 1",
+            "SELECT id, created_at, user_id, tech FROM comments "
+            "WHERE ticket_id = %s ORDER BY created_at ASC LIMIT 1",
             (ticket_id,),
         )
         comment = cursor.fetchone()
@@ -239,12 +238,17 @@ def insert_regex_comments(logger, cursor, data):
         parts = [part.strip() for part in production_info.split(":")]
         if len(parts) == 2:
             job_type, count = parts
+            valid = 1
+            notes = ""
             if count.isdigit():
                 count = int(count)
             else:
                 count = 0
+                valid = 0
+                notes = production_info
                 logger.error(
-                    "Production data with no number on ticket" " removed for now%s",
+                    "Production data with no number on ticket",
+                    " removed for now%s",
                     comment["ticket_id"],
                     extra={"tags": {"output errors": "no number"}},
                 )
@@ -270,12 +274,18 @@ def insert_regex_comments(logger, cursor, data):
                 employee_name = parts[1].strip().split(":")
                 if len(employee_name) == 2:
                     quality_control_rejected_person = employee_name[1]
+            else:
+                valid = 0
+                notes = production_info
 
             # Insert data into the employee_output table
             query = """
-                INSERT IGNORE INTO employee_output
-                (ticket_id, comment_id, employee_id, username, repairs, board_repair, diagnostics, quality_control, quality_control_rejects, quality_control_rejected_person, datetime)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT employee_output
+                (ticket_id, comment_id, employee_id, username, repairs, board_repair, diagnostics, quality_control, quality_control_rejects, quality_control_rejected_person, datetime, valid, notes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                valid = values(valid),
+                notes = values(notes)
             """
             values = (
                 comment["ticket_id"],
@@ -289,5 +299,7 @@ def insert_regex_comments(logger, cursor, data):
                 quality_control_rejects,
                 quality_control_rejected_person,
                 comment["created_at"],
+                valid,
+                notes,
             )
             cursor.execute(query, values)
