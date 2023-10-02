@@ -119,19 +119,12 @@ def tickets(logger, full_run=False, lookback_days=14):
             else:
                 db_rows = 0
             # Check if the API and DB totals match
-            if db_rows == len(all_data):
-                logger.info(
-                    "ALL Good -- Ticket API Rows: %s, DB Rows: %s",
-                    len(all_data),
-                    db_rows,
-                    extra={"tags": {"service": "tickets", "finished": "full"}},
-                )
-            else:
+            if db_rows != len(all_data):
                 logger.error(
                     "Data Mismatch -- Ticket API Rows: %s, DB Rows: %s",
                     len(all_data),
                     db_rows,
-                    extra={"tags": {"service": "tickets", "finished": "full"}},
+                    extra={"tags": {"service": "tickets", "finished": "yes"}},
                 )
 
     if full_run:
