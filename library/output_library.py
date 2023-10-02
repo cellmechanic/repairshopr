@@ -1,6 +1,7 @@
 """Library for the output module"""
 import re
 
+
 def create_employee_output_table_if_not_exists(cursor):
     """Create the employee_output db table if it doesn't already exist"""
     cursor.execute(
@@ -152,14 +153,12 @@ def get_invoice_numbers(logger, cursor, date):
     )
     invoices_created = []
     todays_invoices = cursor.fetchall()
-    print(todays_invoices)
     if todays_invoices:
         for invoice in todays_invoices:
             invoice_id = invoice[0]
             user_id = invoice[1]
             ticket_id = invoice[2]
             created_at = invoice[3]
-            print(user_id)
 
             # Fetch the num_devices from the tickets table
             cursor.execute(
@@ -197,9 +196,11 @@ def insert_intake_numbers(logger, cursor, intake_comments):
     """Insert intake comments into DB"""
     for comment in intake_comments:
         query = """
-            INSERT IGNORE INTO employee_output
-            (ticket_id, comment_id, employee_id, username, intake, datetime)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT employee_output
+            (ticket_id, comment_id, employee_id, username, intake, datetime, notes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+            notes = values(notes)
         """
         values = (
             comment["ticket_id"],
@@ -208,6 +209,7 @@ def insert_intake_numbers(logger, cursor, intake_comments):
             comment["tech"],
             comment["num_devices"],
             comment["created_at"],
+            "intake",
         )
         cursor.execute(query, values)
 
@@ -216,9 +218,11 @@ def insert_invoice_numbers(logger, cursor, invoices_created):
     """Insert invoice creates into DB"""
     for invoice in invoices_created:
         query = """
-            INSERT IGNORE INTO employee_output
-            (ticket_id, invoice_id, employee_id, username, invoices, datetime)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT employee_output
+            (ticket_id, invoice_id, employee_id, username, invoices, datetime, notes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+            notes = values(notes)            
         """
         values = (
             invoice["ticket_id"],
@@ -227,6 +231,7 @@ def insert_invoice_numbers(logger, cursor, invoices_created):
             invoice["username"],
             invoice["num_devices"],
             invoice["created_at"],
+            "invoice",
         )
         cursor.execute(query, values)
 
@@ -235,71 +240,76 @@ def insert_regex_comments(logger, cursor, data):
     """Insert employee output data into DB"""
     for comment in data:
         production_info = comment["body"]
-        parts = [part.strip() for part in production_info.split(":")]
-        if len(parts) == 2:
-            job_type, count = parts
-            valid = 1
-            notes = ""
-            if count.isdigit():
-                count = int(count)
-            else:
-                count = 0
-                valid = 0
-                notes = production_info
-                logger.error(
-                    "Production data with no number on ticket",
-                    " removed for now%s",
-                    comment["ticket_id"],
-                    extra={"tags": {"output errors": "no number"}},
-                )
-            # In case of bad data, set defaults null
-            quality_control_rejected_person = ""
-            repairs = 0
-            board_repair = 0
-            diagnostics = 0
-            quality_control = 0
-            quality_control_rejects = 0
 
-            if job_type.lower() == "r":
-                repairs = count
-            elif job_type.lower() == "d":
-                diagnostics = count
-            elif job_type.lower() == "qc":
-                quality_control = count
-            elif job_type.lower() == "mb":
-                board_repair = count
-            elif job_type.lower() == "qcr":
-                quality_control_rejects = count
-                # Extract the employee name from qcr entries
-                employee_name = parts[1].strip().split(":")
-                if len(employee_name) == 2:
-                    quality_control_rejected_person = employee_name[1]
-            else:
-                valid = 0
-                notes = production_info
+        job_type = ""
+        count = 0
+        valid = 1
+        notes = production_info
 
-            # Insert data into the employee_output table
-            query = """
-                INSERT employee_output
-                (ticket_id, comment_id, employee_id, username, repairs, board_repair, diagnostics, quality_control, quality_control_rejects, quality_control_rejected_person, datetime, valid, notes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                valid = values(valid),
-                notes = values(notes)
-            """
-            values = (
-                comment["ticket_id"],
-                comment["comment_id"],
-                comment["user_id"],
-                comment["tech"],
-                repairs,
-                board_repair,
-                diagnostics,
-                quality_control,
-                quality_control_rejects,
-                quality_control_rejected_person,
-                comment["created_at"],
-                valid,
-                notes,
-            )
-            cursor.execute(query, values)
+        delimiters = [":", ";", "::", ";;"]
+        for delimiter in delimiters:
+            parts = [part.strip() for part in production_info.split(delimiter)]
+            if len(parts) == 2:
+                job_type, count = parts
+                if count.isdigit():
+                    count = int(count)
+                    break
+                else:
+                    count = 0
+                    valid = 0
+                    logger.error(
+                        "Production data with no number on ticket",
+                        " removed for now%s",
+                        comment["ticket_id"],
+                        extra={"tags": {"output errors": "no number"}},
+                    )
+        # In case of bad data, set defaults null
+        quality_control_rejected_person = ""
+        repairs = 0
+        board_repair = 0
+        diagnostics = 0
+        quality_control = 0
+        quality_control_rejects = 0
+
+        if job_type.lower() == "r":
+            repairs = count
+        elif job_type.lower() == "d":
+            diagnostics = count
+        elif job_type.lower() == "qc":
+            quality_control = count
+        elif job_type.lower() == "mb":
+            board_repair = count
+        elif job_type.lower() == "qcr":
+            quality_control_rejects = count
+            # Extract the employee name from qcr entries
+            employee_name = parts[1].strip().split(":")
+            if len(employee_name) == 2:
+                quality_control_rejected_person = employee_name[1]
+        else:
+            valid = 0
+
+        # Insert data into the employee_output table
+        query = """
+            INSERT employee_output
+            (ticket_id, comment_id, employee_id, username, repairs, board_repair, diagnostics, quality_control, quality_control_rejects, quality_control_rejected_person, datetime, valid, notes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+            valid = values(valid),
+            notes = values(notes)
+        """
+        values = (
+            comment["ticket_id"],
+            comment["comment_id"],
+            comment["user_id"],
+            comment["tech"],
+            repairs,
+            board_repair,
+            diagnostics,
+            quality_control,
+            quality_control_rejects,
+            quality_control_rejected_person,
+            comment["created_at"],
+            valid,
+            notes,
+        )
+        cursor.execute(query, values)
