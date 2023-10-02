@@ -379,6 +379,9 @@ def insert_regex_comments(logger, cursor, data):
                     valid = values(valid),
                     notes = values(notes)
                 """
+                notes += " rejected by " + comment["tech"] + " original comment id " + str(comment["comment_id"])
+                now = datetime.datetime.now()
+                print(values)
                 values = (
                     comment["ticket_id"],
                     userid,
@@ -389,8 +392,8 @@ def insert_regex_comments(logger, cursor, data):
                     quality_control,
                     quality_control_rejects,
                     reject_user,
-                    datetime.datetime.now(),
+                    now,
                     valid,
-                    notes + " rejected by " + comment["tech"] + " original comment id " + str(comment["comment_id"]),
+                    notes,
                 )
-            cursor.execute(query, values)
+                cursor.execute(query, values)
