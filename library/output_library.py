@@ -270,12 +270,20 @@ def insert_regex_comments(logger, cursor, data):
                         comment["ticket_id"],
                         extra={"tags": {"output errors": "no number"}},
                     )
+                    
             if len(parts) == 3:
                 job_type, count, userid = parts
                 if count.isdigit() and userid.isdigit():
                     count = int(count)
                     userid = int(userid)
                     break
+                elif job_type.lower() == "r" or "d" or "qc" or "mb":
+                    if count.isdigit() and userid is None:
+                        count = int(count)
+                        break
+                    elif userid.isdigit() and count is None:
+                        count = int(userid)
+                        break
                 else:
                     count = 0
                     valid = 0
@@ -353,7 +361,7 @@ def insert_regex_comments(logger, cursor, data):
             notes,
         )
         cursor.execute(query, values)
-        
+
         query = """SELECT id from employee_output WHERE comment_id = %s"""
         cursor.execute(query, (comment["comment_id"],))
         result = cursor.fetchone()
