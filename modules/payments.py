@@ -47,9 +47,10 @@ def payments(logger, full_run=False, lookback_days=14):
                     for item in data["payments"]
                 )
                 if not found_older:
+                    all_data.extend(data["payments"])
                     break
 
-                all_data.extend(data["payments"])
+
                 logger.info(
                     "Added in page # %s", page, extra={"tags": {"service": "payments"}}
                 )
