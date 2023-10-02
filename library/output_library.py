@@ -352,7 +352,8 @@ def insert_regex_comments(logger, cursor, data):
             valid,
             notes,
         )
-
+        cursor.execute(query, values)
+        
         query = """SELECT id from employee_output WHERE comment_id = %s"""
         cursor.execute(query, (comment["comment_id"],))
         result = cursor.fetchone()
