@@ -271,7 +271,9 @@ def insert_regex_comments(logger, cursor, data):
         quality_control = 0
         quality_control_rejects = 0
 
-        if job_type.lower() == "r":
+        if count == 0:
+            valid = 0
+        elif job_type.lower() == "r":
             repairs = count
         elif job_type.lower() == "d":
             diagnostics = count
