@@ -1,4 +1,5 @@
 """Library for the output module"""
+import datetime
 import re
 
 
@@ -245,6 +246,12 @@ def insert_regex_comments(logger, cursor, data):
         count = 0
         valid = 1
         notes = production_info
+        userid = 0
+
+        ticket_id = comment["ticket_id"]
+        cursor.execute("SELECT num_devices FROM tickets WHERE id = %s", (ticket_id,))
+        ticket_data = cursor.fetchone()
+        num_devices = ticket_data[0] if ticket_data else 1
 
         delimiters = [":", ";", "::", ";;"]
         for delimiter in delimiters:
@@ -253,6 +260,21 @@ def insert_regex_comments(logger, cursor, data):
                 job_type, count = parts
                 if count.isdigit():
                     count = int(count)
+                    break
+                else:
+                    count = 0
+                    valid = 0
+                    logger.error(
+                        "Production data with no number on ticket",
+                        " removed for now%s",
+                        comment["ticket_id"],
+                        extra={"tags": {"output errors": "no number"}},
+                    )
+            if len(parts) == 3:
+                job_type, count, userid = parts
+                if count.isdigit() and userid.isdigit():
+                    count = int(count)
+                    userid = int(userid)
                     break
                 else:
                     count = 0
@@ -274,19 +296,35 @@ def insert_regex_comments(logger, cursor, data):
         if count == 0:
             valid = 0
         elif job_type.lower() == "r":
-            repairs = count
+            if count <= num_devices:
+                repairs = count
+            else:
+                valid = 0
+                notes += " - More repairs than devices"
         elif job_type.lower() == "d":
-            diagnostics = count
+            if count <= num_devices:
+                diagnostics = count
+            else:
+                valid = 0
+                notes += " - More diagnostics than devices"
         elif job_type.lower() == "qc":
-            quality_control = count
+            if count <= num_devices:
+                quality_control = count
+            else:
+                valid = 0
+                notes += " - More quality control than devices"
         elif job_type.lower() == "mb":
-            board_repair = count
+            if count <= num_devices:
+                board_repair = count
+            else:
+                valid = 0
+                notes += " - More board repairs than devices"
         elif job_type.lower() == "qcr":
-            quality_control_rejects = count
-            # Extract the employee name from qcr entries
-            employee_name = parts[1].strip().split(":")
-            if len(employee_name) == 2:
-                quality_control_rejected_person = employee_name[1]
+            if count <= num_devices:
+                quality_control = count
+            else:
+                valid = 0
+                notes += " - More quality control rejects than devices"
         else:
             valid = 0
 
@@ -314,4 +352,45 @@ def insert_regex_comments(logger, cursor, data):
             valid,
             notes,
         )
-        cursor.execute(query, values)
+
+        query = """SELECT id from employee_output WHERE comment_id = %s"""
+        cursor.execute(query, (comment["comment_id"],))
+        result = cursor.fetchone()
+
+        if not result:
+            if job_type.lower() == "qcr":
+                reject_user = ""
+                cursor.execute(
+                    "SELECT name FROM users WHERE id = %s", (userid,),
+                )
+                reject_user = cursor.fetchone()
+                if reject_user:
+                    reject_user = reject_user[0]
+                    quality_control_rejects = count
+                else:
+                    reject_user = "Unknown"
+
+                query = """
+                    INSERT employee_output
+                    (ticket_id, employee_id, username, repairs, board_repair, diagnostics, quality_control, quality_control_rejects, quality_control_rejected_person, datetime, valid, notes)
+                    VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                    datetime = values(datetime),
+                    valid = values(valid),
+                    notes = values(notes)
+                """
+                values = (
+                    comment["ticket_id"],
+                    userid,
+                    reject_user,
+                    -count,
+                    board_repair,
+                    diagnostics,
+                    quality_control,
+                    quality_control_rejects,
+                    reject_user,
+                    datetime.datetime.now(),
+                    valid,
+                    notes + " rejected by " + comment["tech"] + " original comment id " + str(comment["comment_id"]),
+                )
+            cursor.execute(query, values)
