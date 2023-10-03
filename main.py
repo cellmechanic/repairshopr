@@ -43,7 +43,7 @@ def main():
         invoice_lines(logger, False)
         invoices(logger, False, 14)
         payments(logger, False, 14)
-        tickets(logger, False, 1)
+        tickets(logger, False, 7)
         products(logger, False)
         users(logger)
         output(logger)
