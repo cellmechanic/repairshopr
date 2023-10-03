@@ -734,6 +734,7 @@ def move_deleted_comments_to_deleted_table_frequent_only(
                             }
                         },
                     )
+                connection.commit()
                 deleted += 1
 
         logger.warning(
