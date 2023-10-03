@@ -266,7 +266,7 @@ def insert_regex_comments(logger, cursor, data):
                     count = 0
                     valid = 0
                     logger.error(
-                        "Production data with no number on ticket",
+                        "Production data with no number on ticket" +
                         " removed for now%s",
                         comment["ticket_id"],
                         extra={"tags": {"output errors": "no number"}},
@@ -289,7 +289,7 @@ def insert_regex_comments(logger, cursor, data):
                     count = 0
                     valid = 0
                     logger.error(
-                        "Production data with no number on ticket",
+                        "Production data with no number on ticket" +
                         " removed for now%s",
                         comment["ticket_id"],
                         extra={"tags": {"output errors": "no number"}},

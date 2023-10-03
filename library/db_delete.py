@@ -7,6 +7,8 @@ import mysql.connector
 import mysql.connector.errors
 from mysql.connector.errors import ProgrammingError
 
+from library.output_library import create_employee_output_table_if_not_exists
+
 
 def move_deleted_contacts_to_deleted_table(logger, cursor, connection, data):
     """compare the id sums, and move any entries not
@@ -738,6 +740,7 @@ def move_deleted_comments_to_deleted_table_frequent_only(
                                 }
                             },
                         )
+                    create_employee_output_table_if_not_exists(cursor)
                     cursor.execute(
                         "DELETE FROM employee_output WHERE comment_id = %s",
                         (db_comment_id,),
