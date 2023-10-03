@@ -344,7 +344,13 @@ def insert_regex_comments(logger, cursor, data):
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
             valid = values(valid),
-            notes = values(notes)
+            notes = values(notes),
+            repairs = values(repairs),
+            board_repair = values(board_repair),
+            diagnostics = values(diagnostics),
+            quality_control = values(quality_control),
+            quality_control_rejects = values(quality_control_rejects),
+            quality_control_rejected_person = values(quality_control_rejected_person)
         """
         values = (
             comment["ticket_id"],
