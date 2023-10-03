@@ -254,7 +254,7 @@ def insert_regex_comments(logger, cursor, data):
         ticket_data = cursor.fetchone()
         num_devices = ticket_data[0] if ticket_data else 1
 
-        delimiters = [":", ";", "::", ";;"]
+        delimiters = [":", ";", "::", ";;", '"']
         for delimiter in delimiters:
             parts = [part.strip() for part in production_info.split(delimiter)]
             if len(parts) == 2:
