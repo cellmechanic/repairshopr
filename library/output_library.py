@@ -24,7 +24,8 @@ def create_employee_output_table_if_not_exists(cursor):
             invoices INT DEFAULT 0,
             datetime DATETIME,
             valid TINYINT DEFAULT 1,
-            notes TEXT DEFAULT NULL
+            notes TEXT DEFAULT NULL,
+            linked_comment_id INT DEFAULT 0
         )
         """
     )
@@ -270,7 +271,7 @@ def insert_regex_comments(logger, cursor, data):
                         comment["ticket_id"],
                         extra={"tags": {"output errors": "no number"}},
                     )
-                    
+
             if len(parts) == 3:
                 job_type, count, userid = parts
                 if count.isdigit() and userid.isdigit():
@@ -370,7 +371,8 @@ def insert_regex_comments(logger, cursor, data):
             if job_type.lower() == "qcr":
                 reject_user = ""
                 cursor.execute(
-                    "SELECT name FROM users WHERE id = %s", (userid,),
+                    "SELECT name FROM users WHERE id = %s",
+                    (userid,),
                 )
                 reject_user = cursor.fetchone()
                 if reject_user:
@@ -381,14 +383,19 @@ def insert_regex_comments(logger, cursor, data):
 
                 query = """
                     INSERT employee_output
-                    (ticket_id, employee_id, username, repairs, board_repair, diagnostics, quality_control, quality_control_rejects, quality_control_rejected_person, datetime, valid, notes)
-                    VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    (ticket_id, employee_id, username, repairs, board_repair, diagnostics, quality_control, quality_control_rejects, quality_control_rejected_person, datetime, valid, notes, linked_comment_id)
+                    VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON DUPLICATE KEY UPDATE
                     datetime = values(datetime),
                     valid = values(valid),
                     notes = values(notes)
                 """
-                notes += " rejected by " + comment["tech"] + " original comment id " + str(comment["comment_id"])
+                notes += (
+                    " rejected by "
+                    + comment["tech"]
+                    + " original comment id "
+                    + str(comment["comment_id"])
+                )
                 now = datetime.datetime.now()
                 print(values)
                 values = (
@@ -404,5 +411,6 @@ def insert_regex_comments(logger, cursor, data):
                     now,
                     valid,
                     notes,
+                    comment["comment_id"],
                 )
                 cursor.execute(query, values)

@@ -14,7 +14,7 @@ from library.output_library import (
 )
 
 
-def output(logger):
+def output(logger, lookback_days=14):
     """Setup the output table and pull todays comments"""
 
     # Database configurations
@@ -22,15 +22,16 @@ def output(logger):
     cursor, connection = connect_to_db(config)
     create_employee_output_table_if_not_exists(cursor)
 
-    today = datetime.date.today()
+    date = datetime.date.today()
+    date = date - datetime.timedelta(days=lookback_days)
 
-    all_comments = get_comments_db(logger, cursor, today)
+    all_comments = get_comments_db(logger, cursor, date)
 
     output_comments = get_output_comments(logger, all_comments)
 
-    intake_comments = get_intake_comments(logger, cursor, today)
+    intake_comments = get_intake_comments(logger, cursor, date)
 
-    invoices_created = get_invoice_numbers(logger, cursor, today)
+    invoices_created = get_invoice_numbers(logger, cursor, date)
 
     insert_regex_comments(logger, cursor, output_comments)
 

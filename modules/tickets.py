@@ -83,7 +83,6 @@ def tickets(logger, full_run=False, lookback_days=14):
             all_sourced = True
         else:
             all_sourced = False
-        print(all_sourced)
         if all_sourced:
             in_range_comments = []
             for comment in comments:
@@ -103,9 +102,6 @@ def tickets(logger, full_run=False, lookback_days=14):
             # Extract the "id" values and filter out non-integer values
 
             api_sum = sum(comment["id"] for comment in in_range_comments)
-            print(db_id_sum)
-            print(api_sum)
-
             if api_sum != db_id_sum:
                 move_deleted_comments_to_deleted_table_frequent_only(
                     logger, cursor, connection, in_range_comments, db_comments_data

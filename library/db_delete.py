@@ -555,16 +555,6 @@ def move_deleted_comments_to_deleted_table(logger, cursor, connection, data):
         # Check for IDs that are in the DB but not in the API data
         for (db_id,) in db_ids:
             if db_id not in api_ids:
-                logger.warning(
-                    "Moving comment with ID %s to deleted_comments table...",
-                    db_id,
-                    extra={
-                        "tags": {
-                            "service": "move_deleted_comments_to_deleted_table",
-                            "finished": "yes",
-                        }
-                    },
-                )
                 # Copy the row to the deleted_comments table
                 cursor.execute(
                     """INSERT INTO deleted_comments SELECT
@@ -573,6 +563,41 @@ def move_deleted_comments_to_deleted_table(logger, cursor, connection, data):
                 )
                 # Delete the row from the comments table
                 cursor.execute("DELETE FROM comments WHERE id = %s", (db_id,))
+                if cursor.rowcount > 0:
+                    logger.warning(
+                        "Removing comment with ID %s from comments table...",
+                        db_id,
+                        extra={
+                            "tags": {
+                                "service": "move_deleted_comments_to_deleted_table",
+                                "finished": "yes",
+                            }
+                        },
+                    )
+                cursor.execute("DELETE FROM employee_output WHERE comment_id = %s", (db_id,))
+                if cursor.rowcount > 0:
+                    logger.warning(
+                        "Removing comment with ID %s from employee_output table...",
+                        db_id,
+                        extra={
+                            "tags": {
+                                "service": "move_deleted_comments_to_deleted_table",
+                                "finished": "yes",
+                            }
+                        },
+                    )
+                cursor.execute("DELETE FROM employee_output WHERE linked_comment_id = %s", (db_id,))
+                if cursor.rowcount > 0:
+                    logger.warning(
+                        "Removing comment with ID %s from employee_output table, linked column...",
+                        db_id,
+                        extra={
+                            "tags": {
+                                "service": "move_deleted_comments_to_deleted_table",
+                                "finished": "yes",
+                            }
+                        },
+                    )
                 deleted += 1
 
         logger.warning(
@@ -674,6 +699,41 @@ def move_deleted_comments_to_deleted_table_frequent_only(
                 )
                 # Delete the row from the comments table
                 cursor.execute("DELETE FROM comments WHERE id = %s", (db_comment_id,))
+                if cursor.rowcount > 0:
+                    logger.warning(
+                        "Removing comment with ID %s from comments table...",
+                        db_comment_id,
+                        extra={
+                            "tags": {
+                                "service": "move_deleted_comments_to_deleted_table",
+                                "finished": "yes",
+                            }
+                        },
+                    )
+                cursor.execute("DELETE FROM employee_output WHERE comment_id = %s", (db_comment_id,))
+                if cursor.rowcount > 0:
+                    logger.warning(
+                        "Removing comment with ID %s from employee_output table...",
+                        db_comment_id,
+                        extra={
+                            "tags": {
+                                "service": "move_deleted_comments_to_deleted_table",
+                                "finished": "yes",
+                            }
+                        },
+                    )
+                cursor.execute("DELETE FROM employee_output WHERE linked_comment_id = %s", (db_comment_id,))
+                if cursor.rowcount > 0:
+                    logger.warning(
+                        "Removing comment with ID %s from employee_output table, linked column...",
+                        db_comment_id,
+                        extra={
+                            "tags": {
+                                "service": "move_deleted_comments_to_deleted_table",
+                                "finished": "yes",
+                            }
+                        },
+                    )
                 deleted += 1
 
         logger.warning(
