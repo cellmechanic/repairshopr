@@ -111,7 +111,7 @@ def get_intake_comments(logger, cursor, date):
     checked_in_comments = []
 
     cursor.execute(
-        "SELECT id, num_devices FROM tickets WHERE DATE(created_at) = %s", (date,)
+        "SELECT id, num_devices FROM tickets WHERE DATE(created_at) >= %s", (date,)
     )
     tickets_created = cursor.fetchall()
 
@@ -150,7 +150,7 @@ def get_intake_comments(logger, cursor, date):
 def get_invoice_numbers(logger, cursor, date):
     """Insert invoice creates into DB"""
     cursor.execute(
-        "SELECT id, user_id, ticket_id, created_at FROM invoices WHERE DATE(created_at) = %s",
+        "SELECT id, user_id, ticket_id, created_at FROM invoices WHERE DATE(created_at) >= %s",
         (date,),
     )
     invoices_created = []
@@ -202,7 +202,8 @@ def insert_intake_numbers(logger, cursor, intake_comments):
             (ticket_id, comment_id, employee_id, username, intake, datetime, notes)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
-            notes = values(notes)
+            notes = values(notes),
+            intake = values(intake)
         """
         values = (
             comment["ticket_id"],
@@ -212,7 +213,7 @@ def insert_intake_numbers(logger, cursor, intake_comments):
             comment["num_devices"],
             comment["created_at"],
             "intake",
-        )
+        ) 
         cursor.execute(query, values)
 
 
