@@ -36,16 +36,16 @@ def main():
             extra={"tags": {"service": "main_frequent", "finished": "yes"}},
         )
 
-        # volume()
-        # contacts(logger, False)
-        # customers(logger, False)
-        # estimates(logger, False, 7)
-        # invoice_lines(logger, False)
-        # invoices(logger, False, 7)
-        # payments(logger, False, 7)
-        # tickets(logger, False, 7)
-        # products(logger, False)
-        # users(logger)
+        volume()
+        contacts(logger, False)
+        customers(logger, False)
+        estimates(logger, False, 7)
+        invoice_lines(logger, False)
+        invoices(logger, False, 7)
+        payments(logger, False, 7)
+        tickets(logger, False, 7)
+        products(logger, False)
+        users(logger)
         output(logger)
 
         logger.info(
