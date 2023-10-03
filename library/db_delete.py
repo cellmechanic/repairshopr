@@ -783,7 +783,7 @@ def move_deleted_comments_to_deleted_table_frequent_only(
                                 }
                             },
                         )
-                    if "1054" in str(error)
+                    if "1054" in str(error):
                         logger.error(
                             "Column error in employee_output. Skipping...",
                             extra={
