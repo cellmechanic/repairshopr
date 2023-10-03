@@ -2,6 +2,12 @@
 """DB delete functions"""
 
 
+import mysql
+import mysql.connector
+import mysql.connector.errors
+from mysql.connector.errors import ProgrammingError
+
+
 def move_deleted_contacts_to_deleted_table(logger, cursor, connection, data):
     """compare the id sums, and move any entries not
     in the data array to the deleted_contacts table"""
@@ -574,7 +580,9 @@ def move_deleted_comments_to_deleted_table(logger, cursor, connection, data):
                             }
                         },
                     )
-                cursor.execute("DELETE FROM employee_output WHERE comment_id = %s", (db_id,))
+                cursor.execute(
+                    "DELETE FROM employee_output WHERE comment_id = %s", (db_id,)
+                )
                 if cursor.rowcount > 0:
                     logger.warning(
                         "Removing comment with ID %s from employee_output table...",
@@ -586,7 +594,9 @@ def move_deleted_comments_to_deleted_table(logger, cursor, connection, data):
                             }
                         },
                     )
-                cursor.execute("DELETE FROM employee_output WHERE linked_comment_id = %s", (db_id,))
+                cursor.execute(
+                    "DELETE FROM employee_output WHERE linked_comment_id = %s", (db_id,)
+                )
                 if cursor.rowcount > 0:
                     logger.warning(
                         "Removing comment with ID %s from employee_output table, linked column...",
@@ -692,49 +702,89 @@ def move_deleted_comments_to_deleted_table_frequent_only(
                     },
                 )
                 # Copy the row to the deleted_comments table
+                try:
+                    cursor.execute(
+                        """INSERT INTO deleted_comments SELECT
+                                    * FROM comments WHERE id = %s""",
+                        (db_comment_id,),
+                    )
+                except mysql.connector.errors.IntegrityError as error:
+                    if "Duplicate entry" in str(error):
+                        logger.error(
+                            "Comment with ID %s already exists in deleted_comments.",
+                            db_comment_id,
+                            extra={
+                                "tags": {
+                                    "service": "move_deleted_comments_to_deleted_table",
+                                    "finished": "yes",
+                                }
+                            },
+                        )
+                    else:
+                        raise
                 cursor.execute(
-                    """INSERT INTO deleted_comments SELECT
-                                * FROM comments WHERE id = %s""",
+                    "DELETE FROM comments WHERE id = %s",
                     (db_comment_id,),
                 )
-                # Delete the row from the comments table
-                cursor.execute("DELETE FROM comments WHERE id = %s", (db_comment_id,))
-                if cursor.rowcount > 0:
-                    logger.warning(
-                        "Removing comment with ID %s from comments table...",
-                        db_comment_id,
-                        extra={
-                            "tags": {
-                                "service": "move_deleted_comments_to_deleted_table",
-                                "finished": "yes",
-                            }
-                        },
+                try:
+                    if cursor.rowcount > 0:
+                        logger.warning(
+                            "Removing comment with ID %s from comments table...",
+                            db_comment_id,
+                            extra={
+                                "tags": {
+                                    "service": "move_deleted_comments_to_deleted_table",
+                                    "finished": "yes",
+                                }
+                            },
+                        )
+                    cursor.execute(
+                        "DELETE FROM employee_output WHERE comment_id = %s",
+                        (db_comment_id,),
                     )
-                cursor.execute("DELETE FROM employee_output WHERE comment_id = %s", (db_comment_id,))
-                if cursor.rowcount > 0:
-                    logger.warning(
-                        "Removing comment with ID %s from employee_output table...",
-                        db_comment_id,
-                        extra={
-                            "tags": {
-                                "service": "move_deleted_comments_to_deleted_table",
-                                "finished": "yes",
-                            }
-                        },
+                    if cursor.rowcount > 0:
+                        logger.warning(
+                            "Removing comment with ID %s from employee_output table...",
+                            db_comment_id,
+                            extra={
+                                "tags": {
+                                    "service": "move_deleted_comments_to_deleted_table",
+                                    "finished": "yes",
+                                }
+                            },
+                        )
+                    cursor.execute(
+                        "DELETE FROM employee_output WHERE linked_comment_id = %s",
+                        (db_comment_id,),
                     )
-                cursor.execute("DELETE FROM employee_output WHERE linked_comment_id = %s", (db_comment_id,))
-                if cursor.rowcount > 0:
-                    logger.warning(
-                        "Removing comment with ID %s from employee_output table, linked column...",
-                        db_comment_id,
-                        extra={
-                            "tags": {
-                                "service": "move_deleted_comments_to_deleted_table",
-                                "finished": "yes",
-                            }
-                        },
-                    )
-                connection.commit()
+                    if cursor.rowcount > 0:
+                        logger.warning(
+                            "Removing comment with ID %s from "
+                            "employee_output table, linked column...",
+                            db_comment_id,
+                            extra={
+                                "tags": {
+                                    "service": "move_deleted_comments_to_deleted_table",
+                                    "finished": "yes",
+                                }
+                            },
+                        )
+                except (
+                    mysql.connector.errors.IntegrityError,
+                    ProgrammingError,
+                ) as error:
+                    if "1146" in str(error) or "doesn't exist" in str(error):
+                        logger.error(
+                            "Table employee_output doesn't exist. Skipping...",
+                            extra={
+                                "tags": {
+                                    "service": "move_deleted_comments_to_deleted_table",
+                                    "finished": "yes",
+                                }
+                            },
+                        )
+                    else:
+                        raise
                 deleted += 1
 
         logger.warning(
