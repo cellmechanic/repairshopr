@@ -328,7 +328,7 @@ def insert_regex_comments(logger, cursor, data):
                 notes += " - More board repairs than devices"
         elif job_type.lower() == "qcr":
             if count <= num_devices:
-                quality_control = count 
+                quality_control = count
                 quality_control_rejects = count
             else:
                 valid = 0
@@ -372,7 +372,7 @@ def insert_regex_comments(logger, cursor, data):
         cursor.execute(query, (comment["comment_id"],))
         result = cursor.fetchone()
 
-        if not result:
+        if not result and isinstance(count, int):
             if job_type.lower() == "qcr":
                 reject_user = ""
                 cursor.execute(
@@ -393,7 +393,13 @@ def insert_regex_comments(logger, cursor, data):
                     ON DUPLICATE KEY UPDATE
                     datetime = values(datetime),
                     valid = values(valid),
-                    notes = values(notes)
+                    notes = values(notes),
+                    repairs = values(repairs),
+                    board_repair = values(board_repair),
+                    diagnostics = values(diagnostics),
+                    quality_control = values(quality_control),
+                    quality_control_rejects = values(quality_control_rejects),
+                    quality_control_rejected_person = values(quality_control_rejected_person)
                 """
                 notes += (
                     " rejected by "
