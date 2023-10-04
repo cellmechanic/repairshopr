@@ -328,7 +328,8 @@ def insert_regex_comments(logger, cursor, data):
                 notes += " - More board repairs than devices"
         elif job_type.lower() == "qcr":
             if count <= num_devices:
-                quality_control = count
+                quality_control = count 
+                quality_control_rejects = count
             else:
                 valid = 0
                 notes += " - More quality control rejects than devices"
