@@ -266,13 +266,6 @@ def insert_regex_comments(logger, cursor, data):
                 else:
                     count = 0
                     valid = 0
-                    logger.error(
-                        "Production data with no number on ticket"
-                        + " removed for now%s",
-                        comment["ticket_id"],
-                        extra={"tags": {"output errors": "no number"}},
-                    )
-
             if len(parts) == 3:
                 job_type, count, userid = parts
                 if count.isdigit() and userid.isdigit():
