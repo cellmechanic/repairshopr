@@ -296,8 +296,12 @@ def insert_regex_comments(logger, cursor, data):
         quality_control = 0
         quality_control_rejects = 0
 
-        if count == 0:
+        if isinstance(count, str):
             valid = 0
+            notes += " - Not a number"
+        elif count == 0:
+            valid = 0
+            notes += " - No number"
         elif job_type.lower() == "r":
             if count <= num_devices:
                 repairs = count
