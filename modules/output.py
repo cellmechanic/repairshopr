@@ -31,13 +31,13 @@ def output(logger, lookback_days=14):
 
     intake_comments = get_intake_comments(logger, cursor, date)
 
-    invoices_created = get_invoice_numbers(logger, cursor, date)
+    invoices_created = get_invoice_numbers(cursor, date)
 
     insert_regex_comments(logger, cursor, output_comments)
 
-    insert_intake_numbers(logger, cursor, intake_comments)
+    insert_intake_numbers(cursor, intake_comments)
 
-    insert_invoice_numbers(logger, cursor, invoices_created)
+    insert_invoice_numbers(cursor, invoices_created)
 
     connection.commit()
     connection.close()

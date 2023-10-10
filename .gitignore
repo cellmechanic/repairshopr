@@ -16,3 +16,5 @@ last_run_estimates.txt
 last_run_invoices.txt
 last-runs/
 todo.txt
+client_secrets.json
+credentials.json

@@ -8,7 +8,6 @@ import library.env_library as env_library
 from library.api_requests import (
     get_contacts,
 )
-
 def contacts(logger, full_run=False):
     """main script for the contact module"""
 

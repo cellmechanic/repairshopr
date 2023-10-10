@@ -1,6 +1,7 @@
 """ main script for the frequent modules """
 import argparse
 from library.loki_library import start_loki
+from modules.backup import backup_database, upload_to_drive
 from modules.users import users
 from modules.customers import customers
 from modules.invoices import invoices
@@ -36,13 +37,13 @@ def main():
             extra={"tags": {"service": "main_frequent", "finished": "yes"}},
         )
 
-        volume()
-        contacts(logger, False)
-        customers(logger, False)
-        estimates(logger, False, 7)
-        invoice_lines(logger, False)
-        invoices(logger, False, 7)
-        payments(logger, False, 7)
+        # volume()
+        # contacts(logger, False)
+        # customers(logger, False)
+        # estimates(logger, False, 7)
+        # invoice_lines(logger, False)
+        # invoices(logger, False, 7)
+        # payments(logger, False, 7)
         tickets(logger, False, 7)
         products(logger, False)
         users(logger)
@@ -61,14 +62,16 @@ def main():
             extra={"tags": {"service": "main_full", "finished": "full"}},
         )
 
-        contacts(logger, True)
-        customers(logger, True)
-        estimates(logger, True, 0)
-        invoice_lines(logger, True)
-        invoices(logger, True, 0)
-        payments(logger, True, 0)
-        tickets(logger, True, 0)
-        products(logger, True)
+        backup_database(logger)
+        upload_to_drive(logger)
+        # contacts(logger, True)
+        # customers(logger, True)
+        # estimates(logger, True, 0)
+        # invoice_lines(logger, True)
+        # invoices(logger, True, 0)
+        # payments(logger, True, 0)
+        # tickets(logger, True, 0)
+        # products(logger, True)
 
         logger.info(
             "---------END FULL RUN---------------",

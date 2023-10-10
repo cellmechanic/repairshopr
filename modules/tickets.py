@@ -93,35 +93,44 @@ def tickets(logger, full_run=False, lookback_days=14):
             query = "SELECT * from comments WHERE created_at >= %s"
             cursor.execute(query, (get_date_for_header(lookback_days),))
             db_comments = cursor.fetchall()
-            column_names = [desc[0] for desc in cursor.description]
-            db_comments_data = [dict(zip(column_names, comment)) for comment in db_comments]
+            if db_comments and cursor.description:
+                row = cursor.fetchone()
+                column_names = [desc[0] for desc in cursor.description]
+                db_comments_data = [
+                    dict(zip(column_names, comment)) for comment in db_comments
+                ]
 
-            query = "SELECT SUM(id) FROM comments WHERE created_at >= %s"
-            cursor.execute(query, (get_date_for_header(lookback_days),))
-            db_id_sum = cursor.fetchone()[0]
-            # Extract the "id" values and filter out non-integer values
+                query = "SELECT SUM(id) FROM comments WHERE created_at >= %s"
+                cursor.execute(query, (get_date_for_header(lookback_days),))
+                cursor.fetchall()
+                if row:
+                    db_id_sum = row[0]
+                else:
+                    db_id_sum = 0
+                # Extract the "id" values and filter out non-integer values
 
-            api_sum = sum(comment["id"] for comment in in_range_comments)
-            if api_sum != db_id_sum:
-                move_deleted_comments_to_deleted_table_frequent_only(
-                    logger, cursor, connection, in_range_comments, db_comments_data
-                )
-            # Validate data / totals
-            query = "SELECT COUNT(*) FROM tickets WHERE updated_at >= %s"
-            cursor.execute(query, (get_date_for_header(lookback_days),))
-            db_rows = cursor.fetchone()
-            if db_rows is not None:
-                db_rows = db_rows[0]
-            else:
-                db_rows = 0
-            # Check if the API and DB totals match
-            if db_rows != len(all_data):
-                logger.error(
-                    "Data Mismatch -- Ticket API Rows: %s, DB Rows: %s",
-                    len(all_data),
-                    db_rows,
-                    extra={"tags": {"service": "tickets", "finished": "yes"}},
-                )
+                api_sum = sum(comment["id"] for comment in in_range_comments)
+                if api_sum != db_id_sum:
+                    move_deleted_comments_to_deleted_table_frequent_only(
+                        logger, cursor, connection, in_range_comments, db_comments_data
+                    )
+                # Validate data / totals
+                query = "SELECT COUNT(*) FROM tickets WHERE updated_at >= %s"
+                cursor.execute(query, (get_date_for_header(lookback_days),))
+                db_rows = cursor.fetchone()
+                cursor.fetchall()
+                if db_rows is not None:
+                    db_rows = db_rows[0]
+                else:
+                    db_rows = 0
+                # Check if the API and DB totals match
+                if db_rows != len(all_data):
+                    logger.error(
+                        "Data Mismatch -- Ticket API Rows: %s, DB Rows: %s",
+                        len(all_data),
+                        db_rows,
+                        extra={"tags": {"service": "tickets", "finished": "yes"}},
+                    )
 
     if full_run:
         # Get 1st Page, then check to make sure not null

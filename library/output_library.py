@@ -147,7 +147,7 @@ def get_intake_comments(logger, cursor, date):
     return checked_in_comments
 
 
-def get_invoice_numbers(logger, cursor, date):
+def get_invoice_numbers(cursor, date):
     """Insert invoice creates into DB"""
     cursor.execute(
         "SELECT id, user_id, ticket_id, created_at FROM invoices WHERE DATE(created_at) >= %s",
@@ -194,7 +194,7 @@ def get_invoice_numbers(logger, cursor, date):
     return invoices_created
 
 
-def insert_intake_numbers(logger, cursor, intake_comments):
+def insert_intake_numbers(cursor, intake_comments):
     """Insert intake comments into DB"""
     for comment in intake_comments:
         query = """
@@ -217,7 +217,7 @@ def insert_intake_numbers(logger, cursor, intake_comments):
         cursor.execute(query, values)
 
 
-def insert_invoice_numbers(logger, cursor, invoices_created):
+def insert_invoice_numbers(cursor, invoices_created):
     """Insert invoice creates into DB"""
     for invoice in invoices_created:
         query = """
@@ -249,6 +249,7 @@ def insert_regex_comments(logger, cursor, data):
         valid = 1
         notes = production_info
         userid = 0
+        rework = 0
 
         ticket_id = comment["ticket_id"]
         cursor.execute("SELECT num_devices FROM tickets WHERE id = %s", (ticket_id,))
@@ -258,6 +259,13 @@ def insert_regex_comments(logger, cursor, data):
         delimiters = [":", ";", "::", ";;", '"']
         for delimiter in delimiters:
             parts = [part.strip() for part in production_info.split(delimiter)]
+            if len(parts) == 1:
+                job_type = parts[0]
+                if(job_type == "rework"):
+                    rework = 1
+                else:
+                    valid = 0
+
             if len(parts) == 2:
                 job_type, count = parts
                 if count.isdigit():
@@ -320,7 +328,13 @@ def insert_regex_comments(logger, cursor, data):
             else:
                 valid = 0
                 notes += " - More quality control than devices"
-        elif job_type.lower() == "mb":
+        elif job_type.lower() == "mbp":
+            if count <= num_devices:
+                board_repair = count
+            else:
+                valid = 0
+                notes += " - More board repairs than devices"
+        elif job_type.lower() == "mbf":
             if count <= num_devices:
                 board_repair = count
             else:
