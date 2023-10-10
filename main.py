@@ -62,16 +62,16 @@ def main():
             extra={"tags": {"service": "main_full", "finished": "full"}},
         )
 
-        backup_database(logger)
-        upload_to_drive(logger)
-        # contacts(logger, True)
-        # customers(logger, True)
-        # estimates(logger, True, 0)
-        # invoice_lines(logger, True)
-        # invoices(logger, True, 0)
-        # payments(logger, True, 0)
-        # tickets(logger, True, 0)
-        # products(logger, True)
+        # backup_database(logger)
+        # upload_to_drive(logger)
+        contacts(logger, True)
+        customers(logger, True)
+        estimates(logger, True, 0)
+        invoice_lines(logger, True)
+        invoices(logger, True, 0)
+        payments(logger, True, 0)
+        tickets(logger, True, 0)
+        products(logger, True)
 
         logger.info(
             "---------END FULL RUN---------------",
