@@ -2,8 +2,6 @@
 import os
 import subprocess
 from datetime import datetime
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
 from library import env_library
 
 # Database credentials
@@ -57,51 +55,41 @@ def backup_database(logger):
 
 
 def upload_to_drive(logger):
-    """Upload the backup to Google Drive"""
-    gauth = GoogleAuth()
-    
-    # Load existing credentials if they exist
-    gauth.LoadCredentialsFile("credentials.json")
-    
-    if gauth.credentials is None:
-        # If no credentials exist, prompt the user
-        gauth.LocalWebserverAuth()
-    elif gauth.access_token_expired:
-        # If credentials are expired, refresh them
-        gauth.Refresh()
-    else:
-        # Just authorize if everything is in order
-        gauth.Authorize()
-        
-    # Save the current credentials for the next run
-    gauth.SaveCredentialsFile("credentials.json")
-    
-    drive = GoogleDrive(gauth)
+    """Upload the backup to Google Drive using rclone"""
 
-    folder_id = "1x8cN3uGqdKtoc8yV5wenW9r22aFQX4TT"  # Replace with your actual folder ID
+    rclone_remote_name = "maria"
+    folder_id = "proxbackup/prod"
+    dest_path = f"{rclone_remote_name}:{folder_id}"
 
-    file = drive.CreateFile(
-        {
-            "title": os.path.basename(BACKUP_PATH),
-            "parents": [{"id": folder_id}],  # This line specifies the folder
-        }
-    )
+    command = [
+        "rclone",
+        "copy",
+        BACKUP_PATH,
+        dest_path,
+    ]
 
-    file.SetContentFile(BACKUP_PATH)
-    file.Upload()
-    logger.info(
-        "Backup uploaded to Google Drive in the specified folder.",
-        extra={"tags": {"service": "backup", "finished": "full"}},
-    )
-        # Delete the local backup file
     try:
+        result = subprocess.run(command, check=True, capture_output=True, text=True)
+        if result.returncode == 0:
+            logger.info(
+                "Backup up DB to Google Drive",
+                extra={"tags": {"service": "backup", "finished": "full"}},
+            )
+        else:
+            logger.error(
+                f"Error with rclone: {result.stderr}",
+                extra={"tags": {"service": "backup", "finished": "full"}},
+            )
+
+        # Delete the local backup file
         os.remove(BACKUP_PATH)
         logger.info(
             "Local backup file deleted.",
             extra={"tags": {"service": "backup", "finished": "full"}},
         )
+
     except OSError as e:
         logger.error(
-            f"Error deleting the local backup file: {e}",
+            f"Error during rclone operation: {e}",
             extra={"tags": {"service": "backup", "finished": "full"}},
         )
