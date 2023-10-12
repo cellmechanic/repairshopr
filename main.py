@@ -70,7 +70,7 @@ def main():
         # invoice_lines(logger, True)
         # invoices(logger, True)
         # payments(logger, True)
-        # tickets(logger, True)
+        tickets(logger, True)
         products(logger, True)
 
         logger.info(
