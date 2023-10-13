@@ -40,7 +40,7 @@ def main():
         volume()
         contacts(logger, False)
         customers(logger, False)
-        estimates(logger, False, 7)  #
+        estimates(logger, False, 30)
         invoice_lines(logger, False)
         invoices(logger, False, 7)  # has since_updated_at
         payments(logger, False, 7)
@@ -48,7 +48,6 @@ def main():
         products(logger, False)
         users(logger)
         output(logger)
-
         logger.info(
             "----------END EVERY 5 MINS----------------",
             extra={"tags": {"service": "main_frequent", "finished": "yes"}},

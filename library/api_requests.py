@@ -178,7 +178,7 @@ def get_customers(logger, page, max_retries=3, retry_delay=30):
 
 def get_invoice_lines(logger, page, max_retries=3, retry_delay=30):
     """api request for invoice line items"""
-    url = f"{env_library.api_url_invoice_lines}?page={page}"
+    url = f"{env_library.api_url_invoice_lines}?invoice_id_not_null=false&estimate_id_not_null=false&page={page}"
     headers = {"Authorization": f"Bearer {env_library.api_key_invoice}"}
 
     for retry_count in range(max_retries):

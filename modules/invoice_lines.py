@@ -9,17 +9,10 @@ from library.api_requests import (
     get_invoice_lines,
 )
 from library.fix_date_time import rs_to_unix_timestamp
-from library.timestamp_files import update_last_ran, check_last_ran
 
 
 def invoice_lines(logger, full_run=False):
     """main script for the invoice lines module"""
-
-    # Load timestamp
-    timestamp_folder = "last-runs"
-    timestamp_file = f"{timestamp_folder}/last_run_invoice_lines_updates.txt"
-    last_run_timestamp_unix = check_last_ran(timestamp_file)
-
     # Database configurations
     config = env_library.config
     cursor, connection = connect_to_db(config)
@@ -33,9 +26,14 @@ def invoice_lines(logger, full_run=False):
     found_last_updated_row = False
 
     if not full_run:
-        # Get 1st Page, then check to make sure not null
+        cursor.execute("SELECT MAX(updated_at) FROM invoice_items")
+        result = cursor.fetchone()
+        if result:
+            most_recent_update = result[0]
+        else:
+            most_recent_update = 0
         data = get_invoice_lines(logger, current_page)
-        if data is not None:
+        if data:
             total_pages = data["meta"]["total_pages"]
             current_page = total_pages
         else:
@@ -43,32 +41,31 @@ def invoice_lines(logger, full_run=False):
                 "Error getting invoice line item data",
                 extra={"tags": {"service": "invoice_lines"}},
             )
-        logger.info(
-            "Total pages: %s",
-            total_pages,
-            extra={"tags": {"service": "invoice_lines"}},
-        )
 
         # work backwards from last page
         for page in range(total_pages, 0, -1):
             data = get_invoice_lines(logger, page)
-            if data is not None:
-                if (
-                    rs_to_unix_timestamp(data["line_items"][-1]["updated_at"])
-                    < last_run_timestamp_unix
-                ):
-                    found_last_updated_row = True
-                    logger.info(
-                        "Found last updated row in page %s",
-                        page,
-                        extra={"tags": {"service": "invoice_lines"}},
-                    )
+            if data:
+                for line_item in reversed(data["line_items"]):
+                    if rs_to_unix_timestamp(line_item["updated_at"]
+                        ) < rs_to_unix_timestamp(most_recent_update):
+                        found_last_updated_row = True
+                        logger.info(
+                            "Found last updated row in page %s",
+                            page,
+                            extra={"tags": {"service": "invoice_lines"}},
+                        )
+                        break
+                    else:
+                        all_data.append(line_item)
+
+                if found_last_updated_row:
                     break
 
-                all_data.extend(data["line_items"])
                 logger.info(
-                    "Added in page # %s",
+                    "Added in page # %s out of %s",
                     page,
+                    total_pages,
                     extra={"tags": {"service": "invoice_lines"}},
                 )
             else:
@@ -77,7 +74,7 @@ def invoice_lines(logger, full_run=False):
                     extra={"tags": {"service": "invoice_lines"}},
                 )
                 break
-            time.sleep(rate_limit())
+            # time.sleep(rate_limit())
 
         if not found_last_updated_row:
             logger.info(
@@ -91,7 +88,6 @@ def invoice_lines(logger, full_run=False):
             extra={"tags": {"service": "invoice_lines"}},
         )
         insert_invoice_lines(logger, cursor, all_data)
-        update_last_ran(timestamp_file)
 
     if full_run:
         data = get_invoice_lines(logger, current_page)
