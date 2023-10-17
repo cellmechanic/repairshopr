@@ -26,13 +26,16 @@ def invoice_lines(logger, full_run=False):
     found_last_updated_row = False
 
     if not full_run:
-        cursor.execute("SELECT MAX(updated_at) FROM invoice_items")
+        # Get invoice lines
+        cursor.execute(
+            "SELECT MAX(updated_at) FROM invoice_items WHERE invoice_id IS NOT NULL"
+        )
         result = cursor.fetchone()
         if result:
             most_recent_update = result[0]
         else:
             most_recent_update = 0
-        data = get_invoice_lines(logger, current_page)
+        data = get_invoice_lines(logger, current_page, "invoice")
         if data:
             total_pages = data["meta"]["total_pages"]
             current_page = total_pages
@@ -44,14 +47,15 @@ def invoice_lines(logger, full_run=False):
 
         # work backwards from last page
         for page in range(total_pages, 0, -1):
-            data = get_invoice_lines(logger, page)
+            data = get_invoice_lines(logger, page, "invoice")
             if data:
                 for line_item in reversed(data["line_items"]):
-                    if rs_to_unix_timestamp(line_item["updated_at"]
-                        ) < rs_to_unix_timestamp(most_recent_update):
+                    if rs_to_unix_timestamp(
+                        line_item["updated_at"]
+                    ) < rs_to_unix_timestamp(most_recent_update):
                         found_last_updated_row = True
                         logger.info(
-                            "Found last updated row in page %s",
+                            "Found last updated row in invoice lines page %s",
                             page,
                             extra={"tags": {"service": "invoice_lines"}},
                         )
@@ -63,7 +67,7 @@ def invoice_lines(logger, full_run=False):
                     break
 
                 logger.info(
-                    "Added in page # %s out of %s",
+                    "Added in invoice line page # %s out of %s",
                     page,
                     total_pages,
                     extra={"tags": {"service": "invoice_lines"}},
@@ -89,8 +93,80 @@ def invoice_lines(logger, full_run=False):
         )
         insert_invoice_lines(logger, cursor, all_data)
 
+        # Clear out data and flags before moving to estimate lines
+        all_data = []
+        found_last_updated_row = False
+        most_recent_update = 0
+
+        # Get estimate lines
+        cursor.execute(
+            "SELECT MAX(updated_at) FROM invoice_items WHERE invoice_id IS NULL"
+        )
+        result = cursor.fetchone()
+        if result:
+            most_recent_update = result[0]
+        else:
+            most_recent_update = 0
+        data = get_invoice_lines(logger, current_page, "estimate")
+        if data:
+            total_pages = data["meta"]["total_pages"]
+            current_page = total_pages
+        else:
+            logger.error(
+                "Error getting estimate line item data",
+                extra={"tags": {"service": "invoice_lines"}},
+            )
+
+        # work backwards from last page
+        for page in range(total_pages, 0, -1):
+            data = get_invoice_lines(logger, page, "estimate")
+            if data:
+                for line_item in reversed(data["line_items"]):
+                    if rs_to_unix_timestamp(
+                        line_item["updated_at"]
+                    ) < rs_to_unix_timestamp(most_recent_update):
+                        found_last_updated_row = True
+                        logger.info(
+                            "Found last updated estimate row in page %s",
+                            page,
+                            extra={"tags": {"service": "invoice_lines"}},
+                        )
+                        break
+                    else:
+                        all_data.append(line_item)
+
+                if found_last_updated_row:
+                    break
+
+                logger.info(
+                    "Added in estimate lines page # %s out of %s",
+                    page,
+                    total_pages,
+                    extra={"tags": {"service": "invoice_lines"}},
+                )
+            else:
+                logger.error(
+                    "Error getting estimate line item data",
+                    extra={"tags": {"service": "invoice_lines"}},
+                )
+                break
+            time.sleep(rate_limit())
+
+        if not found_last_updated_row:
+            logger.info(
+                "No estimate lines updated since last run",
+                extra={"tags": {"service": "invoice_lines", "updates": "yes"}},
+            )
+
+        logger.info(
+            "Number of entries to consider for DB: %s",
+            len(all_data),
+            extra={"tags": {"service": "invoice_lines"}},
+        )
+        insert_invoice_lines(logger, cursor, all_data)
+
     if full_run:
-        data = get_invoice_lines(logger, current_page)
+        data = get_invoice_lines(logger, current_page, "invoice")
         if data is not None:
             total_pages = data["meta"]["total_pages"]
         else:
@@ -100,7 +176,7 @@ def invoice_lines(logger, full_run=False):
             )
 
         for page in range(1, total_pages + 1):
-            data = get_invoice_lines(logger, page)
+            data = get_invoice_lines(logger, page, "invoice")
             if data is not None:
                 all_data.extend(data["line_items"])
                 api_page = page
