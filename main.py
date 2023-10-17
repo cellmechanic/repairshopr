@@ -37,17 +37,17 @@ def main():
             extra={"tags": {"service": "main_frequent", "finished": "yes"}},
         )
 
-        # volume()
-        # contacts(logger, False)
-        # customers(logger, False)
-        # estimates(logger, False, 30)
+        volume()
+        contacts(logger, False)
+        customers(logger, False)
+        estimates(logger, False, 30)
         invoice_lines(logger, False)
-        # invoices(logger, False, 7)  # has since_updated_at
-        # payments(logger, False, 7)
-        # tickets(logger, False, 14)  # has since_updated_at
-        # products(logger, False)
-        # users(logger)
-        # output(logger)
+        invoices(logger, False, 7)  # has since_updated_at
+        payments(logger, False, 7)
+        tickets(logger, False, 14)  # has since_updated_at
+        products(logger, False)
+        users(logger)
+        output(logger)
         logger.info(
             "----------END EVERY 5 MINS----------------",
             extra={"tags": {"service": "main_frequent", "finished": "yes"}},
@@ -66,7 +66,7 @@ def main():
         contacts(logger, True)
         customers(logger, True)
         estimates(logger, True)
-        invoice_lines(logger, True)
+        # invoice_lines(logger, True)
         invoices(logger, True)
         payments(logger, True)
         tickets(logger, True)
