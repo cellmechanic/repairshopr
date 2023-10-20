@@ -15,7 +15,9 @@ def create_employee_output_table_if_not_exists(cursor):
             employee_id INT,            
             username VARCHAR(255),
             repairs INT DEFAULT 0,
-            board_repair INT DEFAULT 0,
+            repair_rejects INT DEFAULT 0,
+            board_repair_pass INT DEFAULT 0,
+            board_repair_fail INT DEFAULT 0,
             diagnostics INT DEFAULT 0,
             quality_control INT DEFAULT 0,
             quality_control_rejects INT DEFAULT 0,
@@ -24,6 +26,9 @@ def create_employee_output_table_if_not_exists(cursor):
             invoices INT DEFAULT 0,
             datetime DATETIME,
             valid TINYINT DEFAULT 1,
+            reworked TINYINT DEFAULT 0,
+            wfh TINYINT DEFAULT 0,
+            original_comment TEXT DEFAULT NULL,
             notes TEXT DEFAULT NULL,
             linked_comment_id INT DEFAULT 0
         )
@@ -90,9 +95,10 @@ def get_output_comments(logger, all_comments):
                         "created_at": created_at,
                         "ticket_id": ticket_id,
                         "subject": subject,
-                        "body": match,
+                        "body": body,
                         "tech": tech,
                         "user_id": user_id,
+                        "code": match,
                     }
                 )
 
@@ -242,15 +248,14 @@ def insert_invoice_numbers(cursor, invoices_created):
 def insert_regex_comments(logger, cursor, data):
     """Insert employee output data into DB"""
     for comment in data:
-        production_info = comment["body"]
-
+        production_info = comment["code"]
         job_type = ""
         count = 0
         valid = 1
-        notes = production_info
+        notes = comment["code"]
+        original_comment = comment["body"]
         userid = 0
         rework = 0
-
         ticket_id = comment["ticket_id"]
         cursor.execute("SELECT num_devices FROM tickets WHERE id = %s", (ticket_id,))
         ticket_data = cursor.fetchone()
@@ -261,7 +266,7 @@ def insert_regex_comments(logger, cursor, data):
             parts = [part.strip() for part in production_info.split(delimiter)]
             if len(parts) == 1:
                 job_type = parts[0]
-                if(job_type == "rework"):
+                if job_type == "rework":
                     rework = 1
                 else:
                     valid = 0
@@ -274,13 +279,14 @@ def insert_regex_comments(logger, cursor, data):
                 else:
                     count = 0
                     valid = 0
+
             if len(parts) == 3:
                 job_type, count, userid = parts
                 if count.isdigit() and userid.isdigit():
                     count = int(count)
                     userid = int(userid)
                     break
-                elif job_type.lower() == "r" or "d" or "qc" or "mb":
+                elif job_type.lower() == "r" or "d" or "qc" or "mb" or "mbp" or "mbf":
                     if count.isdigit() and userid is None:
                         count = int(count)
                         break
@@ -299,10 +305,14 @@ def insert_regex_comments(logger, cursor, data):
         # In case of bad data, set defaults null
         quality_control_rejected_person = ""
         repairs = 0
-        board_repair = 0
+        repair_rejects = 0
+        board_repair_pass = 0
+        board_repair_fail = 0
         diagnostics = 0
         quality_control = 0
         quality_control_rejects = 0
+        reworked = 0
+        wfh = 0
 
         if isinstance(count, str):
             valid = 0
@@ -328,15 +338,15 @@ def insert_regex_comments(logger, cursor, data):
             else:
                 valid = 0
                 notes += " - More quality control than devices"
-        elif job_type.lower() == "mbp":
+        elif job_type.lower() == "mbp" or job_type.lower() == "mb":
             if count <= num_devices:
-                board_repair = count
+                board_repair_pass = count
             else:
                 valid = 0
                 notes += " - More board repairs than devices"
         elif job_type.lower() == "mbf":
             if count <= num_devices:
-                board_repair = count
+                board_repair_fail = count
             else:
                 valid = 0
                 notes += " - More board repairs than devices"
@@ -353,17 +363,46 @@ def insert_regex_comments(logger, cursor, data):
         # Insert data into the employee_output table
         query = """
             INSERT employee_output
-            (ticket_id, comment_id, employee_id, username, repairs, board_repair, diagnostics, quality_control, quality_control_rejects, quality_control_rejected_person, datetime, valid, notes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON DUPLICATE KEY UPDATE
-            valid = values(valid),
-            notes = values(notes),
-            repairs = values(repairs),
-            board_repair = values(board_repair),
-            diagnostics = values(diagnostics),
-            quality_control = values(quality_control),
-            quality_control_rejects = values(quality_control_rejects),
-            quality_control_rejected_person = values(quality_control_rejected_person)
+            (
+                ticket_id, 
+                comment_id, 
+                employee_id, 
+                username, 
+                repairs, 
+                repair_rejects, 
+                board_repair_pass, 
+                board_repair_fail, 
+                diagnostics, 
+                quality_control, 
+                quality_control_rejects, 
+                quality_control_rejected_person, 
+                datetime, 
+                valid, 
+                reworked, 
+                wfh, 
+                original_comment, 
+                notes
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                ticket_id = values(ticket_id),
+                comment_id = values(comment_id),
+                employee_id = values(employee_id),
+                username = values(username),
+                repairs = values(repairs),
+                repair_rejects = values(repair_rejects),
+                board_repair_pass = values(board_repair_pass),
+                board_repair_fail = values(board_repair_fail),
+                diagnostics = values(diagnostics),
+                quality_control = values(quality_control),
+                quality_control_rejects = values(quality_control_rejects),
+                quality_control_rejected_person = values(quality_control_rejected_person),
+                datetime = values(datetime),
+                valid = values(valid),
+                reworked = values(reworked),
+                wfh = values(wfh),
+                original_comment = values(original_comment),
+                notes = values(notes)
         """
         values = (
             comment["ticket_id"],
@@ -371,13 +410,18 @@ def insert_regex_comments(logger, cursor, data):
             comment["user_id"],
             comment["tech"],
             repairs,
-            board_repair,
+            repair_rejects,
+            board_repair_pass,
+            board_repair_fail,
             diagnostics,
             quality_control,
             quality_control_rejects,
             quality_control_rejected_person,
             comment["created_at"],
             valid,
+            reworked,
+            wfh,
+            original_comment,
             notes,
         )
         cursor.execute(query, values)
@@ -386,7 +430,7 @@ def insert_regex_comments(logger, cursor, data):
         cursor.execute(query, (comment["comment_id"],))
         result = cursor.fetchone()
 
-        if not result and isinstance(count, int):
+        if result and isinstance(count, int):
             if job_type.lower() == "qcr":
                 reject_user = ""
                 cursor.execute(
@@ -402,18 +446,46 @@ def insert_regex_comments(logger, cursor, data):
 
                 query = """
                     INSERT employee_output
-                    (ticket_id, employee_id, username, repairs, board_repair, diagnostics, quality_control, quality_control_rejects, quality_control_rejected_person, datetime, valid, notes, linked_comment_id)
-                    VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    (
+                        ticket_id, 
+                        comment_id, 
+                        employee_id, 
+                        username, 
+                        repairs, 
+                        repair_rejects, 
+                        board_repair_pass, 
+                        board_repair_fail, 
+                        diagnostics, 
+                        quality_control, 
+                        quality_control_rejects, 
+                        quality_control_rejected_person, 
+                        datetime, 
+                        valid, 
+                        reworked, 
+                        wfh, 
+                        original_comment, 
+                        notes
+                    )
+                    VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON DUPLICATE KEY UPDATE
-                    datetime = values(datetime),
-                    valid = values(valid),
-                    notes = values(notes),
-                    repairs = values(repairs),
-                    board_repair = values(board_repair),
-                    diagnostics = values(diagnostics),
-                    quality_control = values(quality_control),
-                    quality_control_rejects = values(quality_control_rejects),
-                    quality_control_rejected_person = values(quality_control_rejected_person)
+                        ticket_id = values(ticket_id),
+                        comment_id = values(comment_id),
+                        employee_id = values(employee_id),
+                        username = values(username),
+                        repairs = values(repairs),
+                        repair_rejects = values(repair_rejects),
+                        board_repair_pass = values(board_repair_pass),
+                        board_repair_fail = values(board_repair_fail),
+                        diagnostics = values(diagnostics),
+                        quality_control = values(quality_control),
+                        quality_control_rejects = values(quality_control_rejects),
+                        quality_control_rejected_person = values(quality_control_rejected_person),
+                        datetime = values(datetime),
+                        valid = values(valid),
+                        reworked = values(reworked),
+                        wfh = values(wfh),
+                        original_comment = values(original_comment),
+                        notes = values(notes)                  
                 """
                 notes += (
                     " rejected by "
@@ -424,18 +496,23 @@ def insert_regex_comments(logger, cursor, data):
                 now = datetime.datetime.now()
                 print(values)
                 values = (
+                    ticket_id,
                     comment["ticket_id"],
                     userid,
                     reject_user,
                     -count,
-                    board_repair,
+                    count,
+                    board_repair_pass,
+                    board_repair_fail,
                     diagnostics,
                     quality_control,
                     quality_control_rejects,
                     reject_user,
                     now,
                     valid,
+                    reworked,
+                    wfh,
+                    original_comment,
                     notes,
-                    comment["comment_id"],
                 )
                 cursor.execute(query, values)

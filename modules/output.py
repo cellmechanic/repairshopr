@@ -14,7 +14,7 @@ from library.output_library import (
 )
 
 
-def output(logger, lookback_days=14):
+def output(logger, lookback_days=30):
     """Setup the output table and pull todays comments"""
 
     # Database configurations
