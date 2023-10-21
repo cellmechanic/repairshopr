@@ -426,12 +426,12 @@ def insert_regex_comments(logger, cursor, data):
         )
         cursor.execute(query, values)
 
-        query = """SELECT id from employee_output WHERE comment_id = %s"""
-        cursor.execute(query, (comment["comment_id"],))
-        result = cursor.fetchone()
+        if job_type.lower() == "qcr":
+            query = """SELECT id from employee_output WHERE comment_id = %s"""
+            cursor.execute(query, (comment["comment_id"],))
+            result = cursor.fetchone()
 
-        if result and isinstance(count, int):
-            if job_type.lower() == "qcr":
+            if result and isinstance(count, int):
                 reject_user = ""
                 cursor.execute(
                     "SELECT name FROM users WHERE id = %s",
@@ -440,7 +440,7 @@ def insert_regex_comments(logger, cursor, data):
                 reject_user = cursor.fetchone()
                 if reject_user:
                     reject_user = reject_user[0]
-                    quality_control_rejects = count
+                    repair_rejects = count
                 else:
                     reject_user = "Unknown"
 
@@ -493,7 +493,6 @@ def insert_regex_comments(logger, cursor, data):
                     + " original comment id "
                     + str(comment["comment_id"])
                 )
-                now = datetime.datetime.now()
                 print(values)
                 values = (
                     ticket_id,
@@ -505,10 +504,10 @@ def insert_regex_comments(logger, cursor, data):
                     board_repair_pass,
                     board_repair_fail,
                     diagnostics,
-                    quality_control,
-                    quality_control_rejects,
-                    reject_user,
-                    now,
+                    0,
+                    0,
+                    comment["tech"],
+                    comment["created_at"],
                     valid,
                     reworked,
                     wfh,
