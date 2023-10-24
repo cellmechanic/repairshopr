@@ -360,6 +360,12 @@ def insert_regex_comments(logger, cursor, data):
         else:
             valid = 0
 
+        created_at_time = comment["created_at"].time()
+        if created_at_time < datetime.time(7, 45) or created_at_time > datetime.time(18, 30):
+            wfh = 1
+        else:
+            wfh = 0
+
         # Insert data into the employee_output table
         query = """
             INSERT employee_output
