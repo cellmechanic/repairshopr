@@ -47,7 +47,7 @@ def main():
         # tickets(logger, False, 14)  # has since_updated_at
         # products(logger, False)
         # users(logger)
-        output(logger, 3)
+        output(logger, 90)
         logger.info(
             "----------END EVERY 5 MINS----------------",
             extra={"tags": {"service": "main_frequent", "finished": "yes"}},
