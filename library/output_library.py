@@ -433,6 +433,19 @@ def insert_regex_comments(logger, cursor, data):
         cursor.execute(query, values)
 
         if job_type.lower() == "qcr":
+            query = """SELECT wfh 
+                    FROM employee_output 
+                    WHERE ticket_id = %s AND repairs > 0 
+                    ORDER BY datetime DESC 
+                    LIMIT 1"""
+            cursor.execute(query, (ticket_id,))
+            entries = cursor.fetchall()
+            if entries:
+                wfh = entries[0][0]
+            else:
+                valid = 0
+                notes += "No repair found to reject"
+
             query = """SELECT id from employee_output WHERE comment_id = %s"""
             cursor.execute(query, (comment["comment_id"],))
             result = cursor.fetchone()
@@ -499,7 +512,6 @@ def insert_regex_comments(logger, cursor, data):
                     + " original comment id "
                     + str(comment["comment_id"])
                 )
-                print(values)
                 values = (
                     ticket_id,
                     comment["ticket_id"],
