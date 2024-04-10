@@ -43,9 +43,9 @@ def main():
         estimates(logger, False, 30)
         invoice_lines(logger, False)
         invoices(logger, False, 7)  # has since_updated_at
-        #payments(logger, False, 7)
+        payments(logger, False, 7)
         tickets(logger, False, 14)  # has since_updated_at
-        #products(logger, False)
+        products(logger, False)
         users(logger)
         output(logger, 90)
         logger.info(

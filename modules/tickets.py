@@ -48,7 +48,7 @@ def tickets(logger, full_run=False, lookback_days=14):
         )
 
         # total_pages + 1
-        for page in range(1, 50): #changed for testing total_pages + 1
+        for page in range(1, total_pages + 1):
             data = get_tickets(logger, page, lookback_days)
             if data is not None:
                 all_data.extend(data["tickets"])
