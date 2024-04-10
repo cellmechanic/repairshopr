@@ -1,6 +1,7 @@
 """Library for the output module"""
 import datetime
 import re
+import json
 
 
 def create_employee_output_table_if_not_exists(cursor):
@@ -31,6 +32,23 @@ def create_employee_output_table_if_not_exists(cursor):
             original_comment TEXT DEFAULT NULL,
             notes TEXT DEFAULT NULL,
             linked_comment_id INT DEFAULT 0
+        )
+        """
+    )
+
+
+def create_part_comments_table_if_not_exists(cursor):
+    """Create the part_comments db table if it doesn't already exist"""
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS part_comments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            ticket_id INT,
+            comment_id INT UNIQUE,
+            employee_id INT,            
+            parts JSON,
+            notes TEXT,
+            datetime DATETIME
         )
         """
     )
@@ -533,3 +551,37 @@ def insert_regex_comments(logger, cursor, data):
                     notes,
                 )
                 cursor.execute(query, values)
+
+
+def insert_part_comments(cursor, data):
+    """Insert part comments into the part_comments table"""
+    for comment in data:
+        ticket_id = comment["ticket_id"]
+        comment_id = comment["comment_id"]
+        user_id = comment["user_id"]
+        body = comment["body"]
+        created_at = comment["created_at"]
+
+        # Extract part numbers and notes from the comment body
+        match = re.search(r'\[(p|P):(.*?)\](.*)', body, re.IGNORECASE | re.DOTALL)
+        if not match:
+            # Skip comments that don't match the specific format
+            continue
+
+        part_numbers_str = match.group(2).strip()
+        part_numbers = re.findall(r'\b\w+\b', part_numbers_str)
+        parts = [p.strip() for p in part_numbers]
+        notes = match.group(3).strip()
+
+        query = """
+        INSERT INTO part_comments (ticket_id, comment_id, employee_id, parts, notes, datetime)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            ticket_id = VALUES(ticket_id),
+            employee_id = VALUES(employee_id),
+            parts = VALUES(parts),
+            notes = VALUES(notes),
+            datetime = VALUES(datetime)
+        """
+        values = (ticket_id, comment_id, user_id, json.dumps(parts), notes, created_at)
+        cursor.execute(query, values)

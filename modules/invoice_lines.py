@@ -46,7 +46,7 @@ def invoice_lines(logger, full_run=False):
             )
 
         # work backwards from last page
-        for page in range(total_pages, 0, -1):
+        for page in range(5, 0, -1): # changed for testing total_pages
             data = get_invoice_lines(logger, page, "invoice")
             if data:
                 for line_item in reversed(data["line_items"]):
@@ -118,7 +118,7 @@ def invoice_lines(logger, full_run=False):
             )
 
         # work backwards from last page
-        for page in range(total_pages, 0, -1):
+        for page in range(5, 0, -1): #changed for testing total_pages
             data = get_invoice_lines(logger, page, "estimate")
             if data:
                 for line_item in reversed(data["line_items"]):

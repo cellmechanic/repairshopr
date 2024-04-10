@@ -4,6 +4,7 @@ from library import env_library
 from library.db_general import connect_to_db
 from library.output_library import (
     create_employee_output_table_if_not_exists,
+    create_part_comments_table_if_not_exists,
     get_comments_db,
     get_intake_comments,
     get_invoice_numbers,
@@ -11,6 +12,7 @@ from library.output_library import (
     insert_intake_numbers,
     insert_invoice_numbers,
     insert_regex_comments,
+    insert_part_comments
 )
 
 
@@ -21,6 +23,7 @@ def output(logger, lookback_days=30):
     config = env_library.config
     cursor, connection = connect_to_db(config)
     create_employee_output_table_if_not_exists(cursor)
+    create_part_comments_table_if_not_exists(cursor)    
 
     date = datetime.date.today()
     date = date - datetime.timedelta(days=lookback_days)
@@ -38,6 +41,8 @@ def output(logger, lookback_days=30):
     insert_intake_numbers(cursor, intake_comments)
 
     insert_invoice_numbers(cursor, invoices_created)
+
+    insert_part_comments(cursor, output_comments)
 
     connection.commit()
     connection.close()

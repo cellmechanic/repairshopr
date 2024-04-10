@@ -39,7 +39,7 @@ def invoices(logger, full_run=False, lookback_days=14):
             )
 
         # total_pages + 1
-        for page in range(1, total_pages + 1):
+        for page in range(1, 5): #changed for testing total_pages + 1
             data = get_invoices(logger, page, lookback_date)
             if data is not None:
                 all_data.extend(data["invoices"])
